@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
     let (error_no_blocking, _guard) = tracing_appender::non_blocking(error_appender);
     let offset = UtcOffset::current_local_offset().expect("should get local offset!");
     let timer = OffsetTime::new(offset, time::format_description::well_known::Rfc3339);
-    tracing_subscriber::registry()
+    let layers = tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().with_timer(timer.clone()))
         .with(
             tracing_subscriber::fmt::layer()
@@ -42,8 +42,13 @@ async fn main() -> anyhow::Result<()> {
                 .with_writer(error_no_blocking.with_max_level(Level::ERROR))
                 .with_ansi(false)
                 .with_timer(timer),
-        )
-        .init();
+        );
+    #[cfg(feature = "console")]
+    {
+        let console_layer = console_subscriber::spawn();
+        layers.with(console_layer)
+    }
+    layers.init();
     info!("Print server config: \n {}", &config);
     info!("Iot server started at: {}", &config.bind_address.clone());
     error!("Not implement error");
