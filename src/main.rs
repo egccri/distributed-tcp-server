@@ -9,7 +9,7 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 mod cli;
 mod config;
-mod protocol;
+pub(crate) mod protocol;
 mod router;
 mod server;
 
