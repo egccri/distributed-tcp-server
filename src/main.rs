@@ -9,12 +9,14 @@ use tracing_subscriber::util::SubscriberInitExt;
 
 mod cli;
 mod config;
+mod panic_hook;
 pub(crate) mod protocol;
 mod router;
 mod server;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    panic_hook::set_panic_hook();
     let cli = cli::Cli::parse();
     let setting = Config::builder()
         .add_source(File::from(cli.config_file()))
