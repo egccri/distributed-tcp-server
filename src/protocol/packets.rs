@@ -1,6 +1,7 @@
 use crate::protocol::packets::heartbeat::HeartbeatRecv;
 use crate::protocol::packets::sign_in::{SignInFire, SignInRecv};
 use crate::protocol::PacketError;
+use std::fmt::{Display, Formatter};
 
 mod heartbeat;
 mod sign_in;
@@ -10,6 +11,7 @@ pub trait Fire: Into<String> {}
 pub trait Recv: TryFrom<String> {}
 
 // 如果你的协议区分req和resp，可以使用一个packet，如果你的协议不区分，则需要分开SendPacket和ReceivePacket
+#[derive(Debug, Clone, PartialEq)]
 pub enum Packet {
     SignIn(SignInRecv),
     SignInAck(SignInFire),
@@ -25,8 +27,21 @@ impl Packet {
         let header = PacketHeader::new(raw.as_str())?;
         match header.packet_type {
             SIGN_IN => Ok(Packet::SignIn(SignInRecv::try_from(raw)?)),
-            u8::MAX | _ => Err(PacketError::UnKnowPacketError { packet: raw }),
+            HEARTBEAT => Ok(Packet::HeartBeat(HeartbeatRecv::try_from(raw)?)),
+            u8::MAX | _ => Err(PacketError::UnKnowRecvPacketError { raw }),
         }
+    }
+
+    pub fn write(self) -> Result<String, PacketError> {
+        match self {
+            Packet::SignInAck(sign_in_ack) => Ok(sign_in_ack.into()),
+            _ => Err(PacketError::UnSupportFirePacketError { packet: self }),
+        }
+    }
+
+    pub fn check_sign_in_packet(raw: &str) -> Result<bool, PacketError> {
+        let header = PacketHeader::new(raw)?;
+        Ok(header.packet_type() == SIGN_IN)
     }
 }
 
@@ -43,12 +58,28 @@ impl PacketHeader {
             })
         } else {
             Err(PacketError::ParsePacketHeaderError {
-                packet: raw.to_string(),
+                raw: raw.to_string(),
             })
         }
     }
 
     pub fn packet_type(&self) -> u8 {
         self.packet_type
+    }
+}
+
+impl Display for Packet {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Packet::SignIn(sign_in) => {
+                write!(f, "SignIn:{:?}", sign_in)
+            }
+            Packet::SignInAck(sign_in_ack) => {
+                write!(f, "SignInAck:{:?}", sign_in_ack)
+            }
+            Packet::HeartBeat(heartbeat) => {
+                write!(f, "Heartbeat:{:?}", heartbeat)
+            }
+        }
     }
 }

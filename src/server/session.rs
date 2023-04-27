@@ -7,15 +7,17 @@ use std::sync::{Arc, RwLock};
 pub struct SharedSession(Arc<RwLock<HashMap<String, Channel>>>);
 
 impl SharedSession {
-    pub async fn close(channel_id: ChannelId) -> Option<Channel> {
+    pub async fn close(&self, channel_id: &ChannelId) -> Option<Channel> {
         None
     }
 
-    pub async fn send(channel_id: ChannelId, packet: Packet) {}
+    pub async fn send(&self, channel_id: &ChannelId, packet: Packet) {}
 
-    pub async fn add(channel_id: ChannelId, channel: Channel) {}
+    pub async fn add(&self, channel: Channel) {}
 
-    pub async fn find(channel_id: ChannelId) -> Option<Channel> {
+    pub async fn find(&self, channel_id: &ChannelId) -> Option<Channel> {
         None
     }
+
+    pub async fn clear_closed_channel(&self) {}
 }

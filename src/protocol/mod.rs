@@ -1,14 +1,19 @@
+use crate::protocol::packets::Packet;
+
 mod codec;
 pub(crate) mod packets;
 
 #[derive(thiserror::Error, Debug)]
 pub enum PacketError {
-    #[error("无法从Frame解析为Packet，原始Frame：{packet}")]
-    ParsePacketError { packet: String },
+    #[error("Can't parse raw to packet, raw: {raw}")]
+    ParsePacketError { raw: String },
 
-    #[error("解析PacketHeader错误，原始Packet：{packet}")]
-    ParsePacketHeaderError { packet: String },
+    #[error("Can't parse packet header from raw, raw: {raw}")]
+    ParsePacketHeaderError { raw: String },
 
-    #[error("未定义的Packet，原始Packet：{packet}")]
-    UnKnowPacketError { packet: String },
+    #[error("UnKnow recv packet, raw: {raw}")]
+    UnKnowRecvPacketError { raw: String },
+
+    #[error("Packet is not support for fire, packet: {packet}")]
+    UnSupportFirePacketError { packet: Packet },
 }

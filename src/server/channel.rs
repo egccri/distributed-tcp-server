@@ -1,7 +1,7 @@
 use crate::protocol::packets::Packet;
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::broadcast::Sender;
 
 // RxPacket 用泛型灵活，但心智负担中，协议相关适合用枚举，因为协议是确定有限的
 #[derive(Debug)]
@@ -71,5 +71,9 @@ impl Channel {
             rx: sender,
             channel_status: ChannelStatus::Established,
         }
+    }
+
+    pub fn channel_id(&self) -> &ChannelId {
+        &self.channel_id
     }
 }

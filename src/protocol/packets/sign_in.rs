@@ -2,6 +2,7 @@ use crate::protocol::packets::{Fire, Recv};
 use crate::protocol::PacketError;
 use crate::protocol::PacketError::ParsePacketError;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct SignInRecv {}
 
 impl TryFrom<String> for SignInRecv {
@@ -9,7 +10,7 @@ impl TryFrom<String> for SignInRecv {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.is_empty() {
-            Err(ParsePacketError { packet: value })
+            Err(ParsePacketError { raw: value })
         } else {
             Ok(SignInRecv {})
         }
@@ -18,6 +19,7 @@ impl TryFrom<String> for SignInRecv {
 
 impl Recv for SignInRecv {}
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct SignInFire {
     code: String,
 }

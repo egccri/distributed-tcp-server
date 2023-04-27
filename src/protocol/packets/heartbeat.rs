@@ -2,6 +2,7 @@ use crate::protocol::packets::Recv;
 use crate::protocol::PacketError;
 use crate::protocol::PacketError::ParsePacketError;
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct HeartbeatRecv {}
 
 impl TryFrom<String> for HeartbeatRecv {
@@ -9,7 +10,7 @@ impl TryFrom<String> for HeartbeatRecv {
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         if value.is_empty() {
-            Err(ParsePacketError { packet: value })
+            Err(ParsePacketError { raw: value })
         } else {
             Ok(HeartbeatRecv {})
         }
