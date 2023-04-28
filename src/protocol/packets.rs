@@ -34,7 +34,11 @@ impl Packet {
 
     pub fn write(self) -> Result<String, PacketError> {
         match self {
-            Packet::SignInAck(sign_in_ack) => Ok(sign_in_ack.into()),
+            Packet::SignInAck(sign_in_ack) => Ok(format!(
+                "{},{}",
+                SIGN_IN_ACK,
+                <SignInFire as Into<String>>::into(sign_in_ack)
+            )),
             _ => Err(PacketError::UnSupportFirePacketError { packet: self }),
         }
     }
@@ -81,5 +85,76 @@ impl Display for Packet {
                 write!(f, "Heartbeat:{:?}", heartbeat)
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_read_sign_in_packet() {
+        let raw_packet = "1,client_id,username,password".to_string();
+        let expected_packet = Packet::SignIn(SignInRecv {
+            client_id: "client_id".to_string(),
+            username: "username".to_string(),
+            password: "password".to_string(),
+        });
+        assert_eq!(Packet::read(raw_packet), Ok(expected_packet));
+    }
+
+    #[test]
+    fn test_read_sign_in_ack_packet() {
+        let raw_packet = "2, 100".to_string();
+        let expected_error = PacketError::UnKnowRecvPacketError {
+            raw: raw_packet.clone(),
+        };
+        assert_eq!(Packet::read(raw_packet), Err(expected_error));
+    }
+
+    #[test]
+    fn test_read_heartbeat_packet() {
+        let raw_packet = "3,12345".to_string();
+        let expected_packet = Packet::HeartBeat(HeartbeatRecv { seq: 12345 });
+        assert_eq!(Packet::read(raw_packet), Ok(expected_packet));
+    }
+
+    #[test]
+    fn test_read_unknown_packet() {
+        let raw_packet = "4,data".to_string();
+        let expected_error = PacketError::UnKnowRecvPacketError {
+            raw: raw_packet.clone(),
+        };
+        assert_eq!(Packet::read(raw_packet), Err(expected_error));
+    }
+
+    #[test]
+    fn test_write_sign_in_ack_packet() {
+        let packet = Packet::SignInAck(SignInFire {
+            code: "100".to_string(),
+        });
+        let expected_raw_packet = "2,100".to_string();
+        assert_eq!(packet.write(), Ok(expected_raw_packet));
+    }
+
+    #[test]
+    fn test_write_unsupported_packet() {
+        let packet = Packet::HeartBeat(HeartbeatRecv { seq: 12345 });
+        let expected_error = PacketError::UnSupportFirePacketError {
+            packet: packet.clone(),
+        };
+        assert_eq!(packet.write(), Err(expected_error));
+    }
+
+    #[test]
+    fn test_check_sign_in_packet_valid() {
+        let raw_packet = "1,username,password";
+        assert_eq!(Packet::check_sign_in_packet(raw_packet), Ok(true));
+    }
+
+    #[test]
+    fn test_check_sign_in_packet_invalid() {
+        let raw_packet = "2,client_id";
+        assert_eq!(Packet::check_sign_in_packet(raw_packet), Ok(false));
     }
 }

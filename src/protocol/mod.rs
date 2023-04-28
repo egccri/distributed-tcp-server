@@ -3,7 +3,7 @@ use crate::protocol::packets::Packet;
 mod codec;
 pub(crate) mod packets;
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, PartialEq)]
 pub enum PacketError {
     #[error("Can't parse raw to packet, raw: {raw}")]
     ParsePacketError { raw: String },
