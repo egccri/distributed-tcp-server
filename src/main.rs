@@ -13,6 +13,7 @@ mod panic_hook;
 pub(crate) mod protocol;
 mod router;
 mod server;
+mod storage;
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
