@@ -1,6 +1,9 @@
 use crate::storage::raft::{Node, NodeId, TypeConfig};
 use openraft::async_trait::async_trait;
-use openraft::{Entry, LogId, LogState, RaftLogReader, RaftSnapshotBuilder, RaftStorage, RaftTypeConfig, Snapshot, SnapshotMeta, StorageError, StoredMembership, Vote};
+use openraft::{
+    Entry, LogId, LogState, RaftLogReader, RaftSnapshotBuilder, RaftStorage, RaftTypeConfig,
+    Snapshot, SnapshotMeta, StorageError, StoredMembership, Vote,
+};
 use serde::{Deserialize, Serialize};
 use std::fmt::Debug;
 use std::ops::RangeBounds;

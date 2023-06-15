@@ -3,7 +3,7 @@ use config::Config;
 use serde::Deserialize;
 use std::fmt::{Display, Formatter};
 
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Clone)]
 pub struct ServerConfig {
     pub server_name: String,
     pub bind_address: String,

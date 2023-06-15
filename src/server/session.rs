@@ -7,6 +7,12 @@ use std::sync::{Arc, RwLock};
 pub struct SharedSession(Arc<RwLock<HashMap<String, Channel>>>);
 
 impl SharedSession {
+    pub async fn init() -> Self {
+        Self(Arc::new(RwLock::new(
+            HashMap::<String, Channel>::with_capacity(4096),
+        )))
+    }
+
     pub async fn close(&self, channel_id: &ChannelId) -> Option<Channel> {
         None
     }

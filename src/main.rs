@@ -1,7 +1,7 @@
 use ::config::{Config, File};
 use clap::Parser;
 use time::UtcOffset;
-use tracing::{error, info, Level};
+use tracing::{info, Level};
 use tracing_subscriber::fmt::time::OffsetTime;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 use tracing_subscriber::layer::SubscriberExt;
@@ -12,7 +12,7 @@ mod config;
 mod panic_hook;
 pub(crate) mod protocol;
 mod router;
-mod server;
+pub mod server;
 mod storage;
 
 #[tokio::main]
@@ -30,7 +30,7 @@ async fn main() -> anyhow::Result<()> {
     let (daily_no_blocking, _guard) = tracing_appender::non_blocking(daily_appender);
     let error_appender = tracing_appender::rolling::never("./logs", "error.log");
     let (error_no_blocking, _guard) = tracing_appender::non_blocking(error_appender);
-    let offset = UtcOffset::current_local_offset().expect("should get local offset!");
+    let offset = UtcOffset::current_local_offset().expect("should not get local offset!");
     let timer = OffsetTime::new(offset, time::format_description::well_known::Rfc3339);
     let layers = tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer().with_timer(timer.clone()))
@@ -49,11 +49,11 @@ async fn main() -> anyhow::Result<()> {
     #[cfg(feature = "console")]
     {
         let console_layer = console_subscriber::spawn();
-        layers.with(console_layer)
+        layers.with(console_layer).init();
     }
+    #[cfg(not(feature = "console"))]
     layers.init();
     info!("Print server config: \n {}", &config);
-    info!("Iot server started at: {}", &config.bind_address.clone());
-    error!("Not implement error");
-    Ok(())
+    info!("Iot server start at: {}", &config.bind_address.clone());
+    cli.execute(config).await
 }

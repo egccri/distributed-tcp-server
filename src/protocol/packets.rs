@@ -16,6 +16,7 @@ pub enum Packet {
     SignIn(SignInRecv),
     SignInAck(SignInFire),
     HeartBeat(HeartbeatRecv),
+    Close(()),
 }
 
 pub const SIGN_IN: u8 = 1;
@@ -83,6 +84,9 @@ impl Display for Packet {
             }
             Packet::HeartBeat(heartbeat) => {
                 write!(f, "Heartbeat:{:?}", heartbeat)
+            }
+            Packet::Close(_) => {
+                write!(f, "Close")
             }
         }
     }

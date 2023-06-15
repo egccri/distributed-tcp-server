@@ -6,6 +6,7 @@ use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
+use tokio::sync::mpsc::error::SendError;
 use tokio::sync::{broadcast, mpsc};
 use tokio::{io, select};
 use tokio_util::codec::{Framed, LinesCodec, LinesCodecError};
@@ -77,9 +78,10 @@ impl BrokerServer {
         };
         info!("A new client sign in: {:?}", first_packet);
 
-        //todo! Channel should hold a heartbeat timer, used to update channel status.
-        //todo! And session need a background task to clear closed channel, it's
+        // FIXME Channel should hold a heartbeat timer, used to update channel status.
+        // FIXME And session need a background task to clear closed channel.
         let (client_sender, client_receiver) = broadcast::channel::<Packet>(10);
+
         let channel = match Self::create_channel(remote, client_sender) {
             Ok(channel) => channel,
             Err(err) => {
@@ -89,9 +91,18 @@ impl BrokerServer {
         };
         session.add(channel).await;
 
-        tokio::spawn(async move {
+        let mut write_task = tokio::spawn(async move {
             Self::handle_writeable(framed_writer, client_receiver).await;
         });
+
+        let mut read_task = tokio::spawn(async {
+            Self::handle_readable(framed_reader, server_sender).await;
+        });
+
+        if tokio::try_join!(&mut write_task, &mut read_task).is_err() {
+            write_task.abort();
+            read_task.abort();
+        }
     }
 
     async fn first_packet(
@@ -126,6 +137,10 @@ impl BrokerServer {
     ) {
         while let Ok(packet) = receiver.recv().await {
             debug!("Channel try send packet: {}", &packet);
+            if packet == Packet::Close(()) {
+                let _ = framed_writer.close().await;
+                break;
+            }
             let raw = match Packet::write(packet) {
                 Ok(raw) => raw,
                 Err(err) => {
@@ -144,10 +159,37 @@ impl BrokerServer {
                             continue;
                         }
                         LinesCodecError::Io(_) => {
-                            // todo! Signal readable task or add a flag to channel, there's only change channel status.
                             let _ = framed_writer.close().await;
+                            break;
                         }
                     }
+                }
+            }
+        }
+    }
+
+    async fn handle_readable(
+        mut framed_reader: SplitStream<Framed<TcpStream, LinesCodec>>,
+        server_sender: mpsc::Sender<Packet>,
+    ) {
+        while let Some(frame) = framed_reader.next().await {
+            debug!("A new frame received: {:?}", &frame);
+            let raw = match frame {
+                Ok(raw) => raw,
+                Err(err) => {
+                    error!("Read frame cause a error: {:?}", err);
+                    continue;
+                }
+            };
+            match Packet::read(raw) {
+                Ok(packet) => match server_sender.send(packet).await {
+                    Ok(_) => {}
+                    Err(err) => {
+                        error!("Send packet to channel error: {:?}", err);
+                    }
+                },
+                Err(err) => {
+                    error!("Write raw string to packet cause a error: {}", err);
                 }
             }
         }
