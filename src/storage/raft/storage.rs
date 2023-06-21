@@ -1,3 +1,5 @@
+use crate::router::{RouterId, Value};
+use crate::server::channel::ChannelId;
 use crate::storage::raft::{Node, NodeId, TypeConfig};
 use openraft::async_trait::async_trait;
 use openraft::{
@@ -5,34 +7,59 @@ use openraft::{
     Snapshot, SnapshotMeta, StorageError, StoredMembership, Vote,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::ops::RangeBounds;
+use std::sync::{Arc, RwLock};
 
-/**
- * Here you will set the types of request that will interact with the raft nodes.
- * For example the `Set` will be used to write data (key and value) to the raft database.
- * The `AddNode` will append a new node to the current existing shared list of nodes.
- * You will want to add any request that can write data in all nodes here.
- */
+// Collect AppData and AppDateResponse here use protoc.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Request {
-    Set { key: String, value: String },
+    // if it necessary add node_id, node id map for channel where
+    Connect { value: Value },                  // replay old value
+    DisConnect { value: Value },               // change channel status
+    GetClientNodeId { channel_id: ChannelId }, // get value
+    BrokerShutdown { router_id: RouterId },    // remove all channel
 }
 
-/**
- * Here you will defined what type of answer you expect from reading the data of a node.
- * In this example it will return a optional value from a given key in
- * the `Request.Set`.
- */
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Response {
     pub value: Option<String>,
 }
 
-pub struct Storage {}
+// RwLock or MVCC
+pub struct Store {
+    // Usually, there's a db that hold the persist like rocksdb, sled or leveldb.
+    // engine: Arc<Engine>
+
+    // A tree map that for search, key is u64 index, value is serde string.
+    log: BTreeMap<u64, String>,
+
+    // The applied log index and data.
+    state_machine: RwLock<StateMachine>,
+
+    // The latest vote store here, in the standard paper, save term only, there's a option feature.
+    voted: RwLock<Option<Vote<NodeId>>>,
+
+    // Purged log id
+    last_purged_log_id: RwLock<Option<LogId<NodeId>>>,
+    // FIXME Add snapshot
+}
+
+pub struct StateMachine {
+    last_applied_log: Option<LogId<NodeId>>,
+
+    data: BTreeMap<String, String>,
+}
+
+impl Store {
+    pub fn new() -> Store {
+        todo!()
+    }
+}
 
 #[async_trait]
-impl RaftLogReader<TypeConfig> for Storage {
+impl RaftLogReader<TypeConfig> for Arc<Store> {
     async fn get_log_state(&mut self) -> Result<LogState<TypeConfig>, StorageError<NodeId>> {
         todo!()
     }
@@ -46,14 +73,14 @@ impl RaftLogReader<TypeConfig> for Storage {
 }
 
 #[async_trait]
-impl RaftSnapshotBuilder<TypeConfig> for Storage {
+impl RaftSnapshotBuilder<TypeConfig> for Arc<Store> {
     async fn build_snapshot(&mut self) -> Result<Snapshot<TypeConfig>, StorageError<NodeId>> {
         todo!()
     }
 }
 
 #[async_trait]
-impl RaftStorage<TypeConfig> for Storage {
+impl RaftStorage<TypeConfig> for Arc<Store> {
     type LogReader = Self;
     type SnapshotBuilder = Self;
 

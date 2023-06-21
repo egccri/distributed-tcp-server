@@ -1,10 +1,12 @@
-use std::collections::HashMap;
+use crate::server::channel::{ChannelId, ChannelStatus};
+use serde::{Deserialize, Serialize};
 
+mod local;
+mod remote;
+mod server;
 mod storage;
 
 pub use storage::Storage as RouterStorage;
-
-pub type Link = (String, String);
 
 /// router saved the connection and channel map state
 /// any channel status changed is send to the raft leader
@@ -12,9 +14,27 @@ pub type Link = (String, String);
 /// router is store the device_id with channel
 /// channel split local channel and remote channel.
 /// router shared between raft cluster
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Router {
-    /// store device_id and node_id,
-    pub links: HashMap<String, Link>,
+    router: RouterId,
+    local_address: String,
+    remote_addr: String,
+}
+
+pub type RouterId = u64;
+
+/// Key is the link between connection and channel
+pub type Key = ChannelId;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Value {
+    channel_id: ChannelId,
+    router: Router,
+    channel_status: ChannelStatus,
+}
+
+impl Router {
+    // Split local and remote message here.
 }
 
 // raft shared rpc caller

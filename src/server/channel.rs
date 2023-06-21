@@ -1,4 +1,5 @@
 use crate::protocol::packets::Packet;
+use serde::{Deserialize, Serialize};
 use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
 use tokio::sync::broadcast::Sender;
@@ -23,7 +24,8 @@ impl Display for Channel {
     }
 }
 
-#[derive(Debug, Clone)]
+//
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChannelId {
     id: String,
 }
@@ -40,7 +42,7 @@ impl ChannelId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChannelStatus {
     Established,
     Closing,

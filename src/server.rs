@@ -10,7 +10,7 @@ use tokio_util::codec::LinesCodecError;
 use tracing::info;
 
 mod broker;
-mod channel;
+pub mod channel;
 mod session;
 
 pub async fn start(

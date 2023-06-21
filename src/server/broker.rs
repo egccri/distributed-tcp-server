@@ -6,7 +6,6 @@ use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use std::net::SocketAddr;
 use tokio::net::{TcpListener, TcpStream};
-use tokio::sync::mpsc::error::SendError;
 use tokio::sync::{broadcast, mpsc};
 use tokio::{io, select};
 use tokio_util::codec::{Framed, LinesCodec, LinesCodecError};

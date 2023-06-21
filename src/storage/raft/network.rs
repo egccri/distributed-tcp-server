@@ -6,12 +6,45 @@ use openraft::raft::{
     AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest, InstallSnapshotResponse,
     VoteRequest, VoteResponse,
 };
-use openraft::RaftNetwork;
+use openraft::{RaftNetwork, RaftNetworkFactory, RaftTypeConfig};
+use std::sync::Arc;
+use tonic::transport::channel::Channel;
 
-pub struct Network {}
+pub struct NetworkManager {
+    // FIXME Grpc client channel with pool
+    connections: Arc<Channel>,
+}
+
+pub struct Network {
+    manager: NetworkManager,
+}
+
+#[async_trait]
+impl RaftNetworkFactory<TypeConfig> for NetworkManager {
+    type Network = Network;
+
+    async fn new_client(
+        &mut self,
+        target: <TypeConfig as RaftTypeConfig>::NodeId,
+        node: &<TypeConfig as RaftTypeConfig>::Node,
+    ) -> Self::Network {
+        todo!()
+    }
+}
+
+impl NetworkManager {
+    pub fn new() -> NetworkManager {
+        todo!()
+    }
+
+    // Rpc call here.
+    pub fn call() {}
+}
 
 #[async_trait]
 impl RaftNetwork<TypeConfig> for Network {
+    // how to ensure the log's seq in the raft core, there's multi rpc calls.
+    // log index and term
     async fn send_append_entries(
         &mut self,
         rpc: AppendEntriesRequest<TypeConfig>,
