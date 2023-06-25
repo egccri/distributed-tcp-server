@@ -13,12 +13,17 @@ use storage::Response;
 
 mod network;
 mod network_api;
+mod raft_service;
 mod storage;
 
 /// The unique id of the raft node.
 pub type NodeId = u64;
 /// Node is custom node data that can used by raft core.
 pub type Node = BasicNode;
+
+pub type LogStore = Adaptor<TypeConfig, Arc<Store>>;
+pub type StateMachineStore = Adaptor<TypeConfig, Arc<Store>>;
+pub type RaftCore = openraft::Raft<TypeConfig, NetworkManager, LogStore, StateMachineStore>;
 
 openraft::declare_raft_types!(
     /// Declare the type configuration for example K/V store.

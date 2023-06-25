@@ -1,5 +1,5 @@
 syntax = "proto3";
-package raft;
+package raft_service;
 
 service RaftService {
 

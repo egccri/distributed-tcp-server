@@ -1,6 +1,6 @@
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     tonic_build::configure()
-        // .out_dir("./src/server")
+        .out_dir("./src/storage/raft")
         .compile(&["./proto/raft.proto"], &["./proto"])?;
     Ok(())
 }
