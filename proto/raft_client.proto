@@ -1,0 +1,15 @@
+syntax = "proto3";
+package raft_client_service;
+
+service RaftClientService {
+  rpc SendMessage(RaftClientRequest) returns (RaftClientReply);
+}
+
+// request is serde with json string
+message RaftClientRequest {
+  string inner = 1;
+}
+
+message RaftClientReply {
+  string inner = 1;
+}

@@ -1,5 +1,6 @@
 use super::TypeConfig;
 use super::{Node, NodeId};
+use crate::storage::raft::raft_service::raft_service_client::RaftServiceClient;
 use openraft::async_trait::async_trait;
 use openraft::error::{InstallSnapshotError, RPCError, RaftError};
 use openraft::raft::{
@@ -7,16 +8,18 @@ use openraft::raft::{
     VoteRequest, VoteResponse,
 };
 use openraft::{RaftNetwork, RaftNetworkFactory, RaftTypeConfig};
-use std::sync::Arc;
-use tonic::transport::channel::Channel;
 
+// 无状态？
+#[derive(Debug, Clone)]
 pub struct NetworkManager {
     // FIXME Grpc client channel with pool
-    connections: Arc<Channel>,
 }
 
+#[derive(Debug)]
 pub struct Network {
     manager: NetworkManager,
+    target: NodeId,
+    target_node: Node,
 }
 
 #[async_trait]
@@ -26,15 +29,19 @@ impl RaftNetworkFactory<TypeConfig> for NetworkManager {
     async fn new_client(
         &mut self,
         target: <TypeConfig as RaftTypeConfig>::NodeId,
-        node: &<TypeConfig as RaftTypeConfig>::Node,
+        target_node: &<TypeConfig as RaftTypeConfig>::Node,
     ) -> Self::Network {
-        todo!()
+        Network {
+            manager: self.clone(),
+            target,
+            target_node: target_node.clone(),
+        }
     }
 }
 
 impl NetworkManager {
     pub fn new() -> NetworkManager {
-        todo!()
+        NetworkManager {}
     }
 
     // Rpc call here.
@@ -67,5 +74,15 @@ impl RaftNetwork<TypeConfig> for Network {
         rpc: VoteRequest<NodeId>,
     ) -> Result<VoteResponse<NodeId>, RPCError<NodeId, Node, RaftError<NodeId>>> {
         todo!()
+    }
+}
+
+impl NetworkManager {
+    pub async fn send_append_entries(
+        node: Node,
+    ) -> Result<(), RPCError<NodeId, Node, RaftError<NodeId>>> {
+        // FIXME map unwrap to the RPCError.
+        let client = RaftServiceClient::connect(node.addr).await.unwrap();
+        Ok(())
     }
 }

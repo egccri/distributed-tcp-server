@@ -11,8 +11,10 @@ use crate::storage::raft::storage::Store;
 use storage::Request;
 use storage::Response;
 
+mod client;
 mod network;
 mod network_api;
+mod raft_client_service;
 mod raft_service;
 mod storage;
 

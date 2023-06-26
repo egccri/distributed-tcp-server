@@ -1,8 +1,9 @@
+use crate::storage::raft::raft_client_service::raft_client_service_server::RaftClientService;
+use crate::storage::raft::raft_client_service::{RaftClientReply, RaftClientRequest};
 use crate::storage::raft::raft_service::raft_service_server::{RaftService, RaftServiceServer};
 use crate::storage::raft::raft_service::{RaftReply, RaftRequest};
 use crate::storage::raft::RaftCore;
 use crate::storage::RaftStorageError;
-use openraft::Raft;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
@@ -45,6 +46,19 @@ impl RaftService for RaftSvc {
     }
 
     async fn vote(&self, request: Request<RaftRequest>) -> Result<Response<RaftReply>, Status> {
+        todo!()
+    }
+}
+
+#[derive(Debug, Default)]
+struct RaftClientSvc {}
+
+#[tonic::async_trait]
+impl RaftClientService for RaftClientSvc {
+    async fn send_message(
+        &self,
+        request: Request<RaftClientRequest>,
+    ) -> Result<Response<RaftClientReply>, Status> {
         todo!()
     }
 }
