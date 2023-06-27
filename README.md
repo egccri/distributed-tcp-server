@@ -17,8 +17,9 @@ Raft storage is an optional embedded distribute storage for the cluster router c
  
 The other way is redis.
 
+#### RPC calls
 
-
+![RPC calls](asserts/imgs/rpcs.png)
 
 #### Quick start
 

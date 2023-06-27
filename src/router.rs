@@ -1,8 +1,8 @@
 use crate::server::channel::{ChannelId, ChannelStatus};
 use serde::{Deserialize, Serialize};
 
-mod local;
 mod remote;
+mod router_service;
 mod server;
 mod storage;
 
@@ -35,6 +35,7 @@ pub struct Value {
 
 impl Router {
     // Split local and remote message here.
+    // Process local to the local broker session.
 }
 
 // raft shared rpc caller

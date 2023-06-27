@@ -1,0 +1,15 @@
+syntax = "proto3";
+package router_service;
+
+service RouterService {
+  rpc SendPacket(RouterRequest) returns (RouterReply);
+}
+
+// messaging is serde with from ot into string,depends on your packet
+message RouterRequest {
+  string packet = 1;
+}
+
+message RouterReply {
+  string packet = 1;
+}
