@@ -5,7 +5,20 @@ _[WIP] Distributed version use openraft._
 
 #### How it worked.
 
-![How it worked](asserts/imgs/img.png)
+![how it worked](asserts/imgs/img.png)
+
+#### Cluster arch.
+
+![cluster arch](asserts/imgs/cluster.png)
+
+#### Raft storage
+
+Raft storage is an optional embedded distribute storage for the cluster router component, and it based on openraft. 
+ 
+The other way is redis.
+
+
+
 
 #### Quick start
 
