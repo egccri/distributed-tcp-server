@@ -1,12 +1,30 @@
 use crate::server::channel::{ChannelId, ChannelStatus};
 use serde::{Deserialize, Serialize};
+use tonic::codegen::http::uri::InvalidUri;
+use tonic::Status;
 
 mod remote;
 mod router_service;
 mod server;
 mod storage;
 
+use crate::protocol::PacketError;
 pub use storage::Storage as RouterStorage;
+
+#[derive(thiserror::Error, Debug)]
+pub enum RouterError {
+    #[error("Send packet error cause by {0}.")]
+    SendMessageError(#[from] PacketError),
+
+    #[error("Error cause by channel connect.")]
+    ChannelConnectError,
+
+    #[error(transparent)]
+    InvalidUri(#[from] InvalidUri),
+
+    #[error("Remote received a error status: {0}")]
+    ReplyErrorStatus(Status),
+}
 
 /// router saved the connection and channel map state
 /// any channel status changed is send to the raft leader
