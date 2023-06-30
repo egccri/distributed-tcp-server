@@ -1,8 +1,10 @@
 use crate::config::ServerConfig;
 use crate::protocol::packets::Packet;
 use crate::protocol::PacketError;
+use crate::router::Router;
 use crate::server::broker::BrokerServer;
 use crate::server::session::SharedSession;
+use crate::storage::raft::RaftCore;
 use std::io;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Sender;
@@ -12,6 +14,13 @@ use tracing::info;
 mod broker;
 pub mod channel;
 mod session;
+
+pub struct Cluster {
+    broker: BrokerServer,
+    router: Router,
+    #[cfg(feature = "raft-store")]
+    raft: RaftCore,
+}
 
 pub async fn start(
     server_config: ServerConfig,

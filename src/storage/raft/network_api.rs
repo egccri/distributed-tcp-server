@@ -1,4 +1,6 @@
-use crate::storage::raft::raft_client_service::raft_client_service_server::RaftClientService;
+use crate::storage::raft::raft_client_service::raft_client_service_server::{
+    RaftClientService, RaftClientServiceServer,
+};
 use crate::storage::raft::raft_client_service::{RaftClientReply, RaftClientRequest};
 use crate::storage::raft::raft_service::raft_service_server::{RaftService, RaftServiceServer};
 use crate::storage::raft::raft_service::{RaftReply, RaftRequest};
@@ -7,16 +9,14 @@ use crate::storage::RaftStorageError;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 
-pub struct Cluster {
-    raft: RaftCore,
-}
-
 // raft network api impl with grpc server
 pub async fn start_raft_api_server(addr: &str) -> Result<(), RaftStorageError> {
     let socket_addr = addr.parse()?;
     let raft_service = RaftSvc::default();
+    let raft_client_service = RaftClientSvc::default();
     Server::builder()
         .add_service(RaftServiceServer::new(raft_service))
+        .add_service(RaftClientServiceServer::new(raft_client_service))
         .serve(socket_addr)
         .await?;
     Ok(())

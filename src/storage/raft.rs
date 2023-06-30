@@ -33,6 +33,10 @@ openraft::declare_raft_types!(
     Entry = Entry<TypeConfig>, SnapshotData = Cursor<Vec<u8>>
 );
 
+pub struct Cluster {
+    raft: RaftCore,
+}
+
 // When main server start and before accept tcp connections, start the RaftStore.
 // Include start a raft server, check snapshot data to the router etc.
 pub async fn start(node_id: NodeId, addr: &str) {

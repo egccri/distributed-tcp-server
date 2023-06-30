@@ -1,6 +1,8 @@
 use crate::server::channel::{ChannelId, ChannelStatus};
 use serde::{Deserialize, Serialize};
+use std::net::AddrParseError;
 use tonic::codegen::http::uri::InvalidUri;
+use tonic::transport::Error;
 use tonic::Status;
 
 mod remote;
@@ -24,6 +26,12 @@ pub enum RouterError {
 
     #[error("Remote received a error status: {0}")]
     ReplyErrorStatus(Status),
+
+    #[error("Socket addr parse error, cause by {0}.")]
+    SocketAddrParseError(#[from] AddrParseError),
+
+    #[error("Raft server api start error: cause by {0}")]
+    TonicServerError(#[from] Error),
 }
 
 /// router saved the connection and channel map state
