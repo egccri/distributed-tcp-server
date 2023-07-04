@@ -10,7 +10,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::Debug;
 use std::ops::RangeBounds;
-use std::sync::{Arc, RwLock};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
 
 // Collect AppData and AppDateResponse here use protoc.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -33,7 +34,7 @@ pub struct Store {
     // engine: Arc<Engine>
 
     // A tree map that for search, key is u64 index, value is serde string.
-    log: BTreeMap<u64, String>,
+    log: RwLock<BTreeMap<u64, String>>,
 
     // The applied log index and data.
     state_machine: RwLock<StateMachine>,
@@ -43,7 +44,11 @@ pub struct Store {
 
     // Purged log id
     last_purged_log_id: RwLock<Option<LogId<NodeId>>>,
-    // FIXME Add snapshot
+
+    snapshot_idx: Arc<Mutex<u64>>,
+
+    /// The current snapshot.
+    current_snapshot: RwLock<Option<StoreSnapshot>>,
 }
 
 pub struct StateMachine {
@@ -52,9 +57,32 @@ pub struct StateMachine {
     data: BTreeMap<String, String>,
 }
 
+pub struct StoreSnapshot {
+    pub meta: SnapshotMeta<NodeId, ()>,
+
+    /// The data of the state machine at the time of this snapshot.
+    pub data: Vec<u8>,
+}
+
 impl Store {
     pub fn new() -> Store {
-        todo!()
+        Store {
+            log: RwLock::new(BTreeMap::new()),
+            state_machine: RwLock::new(StateMachine::new()),
+            voted: RwLock::new(None),
+            last_purged_log_id: RwLock::new(None),
+            snapshot_idx: Arc::new(Mutex::new(0)),
+            current_snapshot: RwLock::new(None),
+        }
+    }
+}
+
+impl StateMachine {
+    pub fn new() -> StateMachine {
+        StateMachine {
+            last_applied_log: None,
+            data: Default::default(),
+        }
     }
 }
 
