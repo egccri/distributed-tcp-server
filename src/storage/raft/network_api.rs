@@ -4,7 +4,6 @@ use crate::storage::raft::raft_client_service::raft_client_service_server::{
 use crate::storage::raft::raft_client_service::{RaftClientReply, RaftClientRequest};
 use crate::storage::raft::raft_service::raft_service_server::{RaftService, RaftServiceServer};
 use crate::storage::raft::raft_service::{RaftReply, RaftRequest};
-use crate::storage::raft::RaftCore;
 use crate::storage::RaftStorageError;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};

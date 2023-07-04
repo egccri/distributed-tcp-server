@@ -64,6 +64,12 @@ impl Router {
     // Process local to the local broker session.
 }
 
+impl Value {
+    pub fn channel_id(&self) -> ChannelId {
+        self.channel_id.clone()
+    }
+}
+
 // raft shared rpc caller
 
 // raft shared channel status

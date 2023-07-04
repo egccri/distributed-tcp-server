@@ -42,6 +42,18 @@ impl ChannelId {
     }
 }
 
+impl From<String> for ChannelId {
+    fn from(value: String) -> Self {
+        Self { id: value }
+    }
+}
+
+impl Into<String> for ChannelId {
+    fn into(self) -> String {
+        self.id
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ChannelStatus {
     Established,
