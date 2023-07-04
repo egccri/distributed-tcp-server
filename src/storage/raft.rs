@@ -3,11 +3,14 @@ use async_trait::async_trait;
 use openraft::storage::Adaptor;
 use openraft::{BasicNode, Config, Entry};
 use std::io::Cursor;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::server::channel::ChannelId;
 use crate::storage::raft::network::NetworkManager;
+use crate::storage::raft::network_api::start_raft_api_server;
 use crate::storage::raft::storage::Store;
+use crate::storage::RaftStorageError;
 use storage::Request;
 use storage::Response;
 
@@ -33,31 +36,52 @@ openraft::declare_raft_types!(
     Entry = Entry<TypeConfig>, SnapshotData = Cursor<Vec<u8>>
 );
 
-pub struct Cluster {
-    raft: RaftCore,
+pub struct RaftServer {
+    raft: Option<RaftCore>,
+    server_addr: PathBuf,
+    node_id: u64,
+    // FIXME add config here
 }
 
 // When main server start and before accept tcp connections, start the RaftStore.
 // Include start a raft server, check snapshot data to the router etc.
-pub async fn start(node_id: NodeId, addr: &str) {
-    let config = Config {
-        heartbeat_interval: 500,
-        election_timeout_min: 1500,
-        election_timeout_max: 3000,
-        ..Default::default()
-    };
+impl RaftServer {
+    pub fn new(node_id: u64, server_addr: &str) -> RaftServer {
+        RaftServer {
+            raft: None,
+            server_addr: server_addr.parse().unwrap(),
+            node_id,
+        }
+    }
 
-    let config = Arc::new(config.validate().unwrap());
+    pub async fn start(
+        &mut self,
+        node_id: NodeId,
+        server_addr: &str,
+    ) -> Result<(), RaftStorageError> {
+        let config = Config {
+            heartbeat_interval: 500,
+            election_timeout_min: 1500,
+            election_timeout_max: 3000,
+            ..Default::default()
+        };
 
-    let store = Arc::new(Store::new());
+        let config = Arc::new(config.validate().unwrap());
 
-    let (log_store, state_machine) = Adaptor::new(store.clone());
+        let store = Arc::new(Store::new());
 
-    let network = NetworkManager::new();
+        let (log_store, state_machine) = Adaptor::new(store.clone());
 
-    let raft = openraft::Raft::new(node_id, config.clone(), network, log_store, state_machine)
-        .await
-        .unwrap();
+        let network = NetworkManager::new();
+
+        let raft = openraft::Raft::new(node_id, config.clone(), network, log_store, state_machine)
+            .await
+            .unwrap();
+        self.raft = Some(raft.clone());
+        start_raft_api_server(server_addr, raft).await?;
+
+        Ok(())
+    }
 }
 
 // Hold a raft client there, read or write to the raft.

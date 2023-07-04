@@ -4,7 +4,7 @@ use crate::protocol::PacketError;
 use crate::router::Router;
 use crate::server::broker::BrokerServer;
 use crate::server::session::SharedSession;
-use crate::storage::raft::RaftCore;
+use crate::storage::raft::RaftServer;
 use std::io;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Sender;
@@ -19,7 +19,7 @@ pub struct Cluster {
     broker: BrokerServer,
     router: Router,
     #[cfg(feature = "raft-store")]
-    raft: RaftCore,
+    raft: RaftServer,
 }
 
 pub async fn start(
