@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter};
 use std::net::SocketAddr;
 use tokio::sync::broadcast::Sender;
 
-// RxPacket 用泛型灵活，但心智负担中，协议相关适合用枚举，因为协议是确定有限的
+// RxPacket 用泛型灵活，但心智负担重，协议相关适合用枚举，因为协议是确定有限的
 #[derive(Debug)]
 pub struct Channel {
     channel_id: ChannelId,

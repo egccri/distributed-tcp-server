@@ -12,7 +12,7 @@ use tonic::transport::{Channel, Endpoint};
 pub type RouterClients = Arc<RwLock<HashMap<RouterId, (IpAddr, RouterGrpcClient)>>>;
 
 #[derive(Debug, Clone)]
-pub struct RemoteRouter {
+pub struct Remotes {
     inner: RouterClients,
 }
 
@@ -63,9 +63,9 @@ impl RouterGrpcClient {
     }
 }
 
-impl RemoteRouter {
-    pub async fn new() -> RemoteRouter {
-        RemoteRouter {
+impl Remotes {
+    pub async fn new() -> Remotes {
+        Remotes {
             inner: Arc::new(RwLock::new(HashMap::new())),
         }
     }

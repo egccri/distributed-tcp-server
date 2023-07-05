@@ -7,7 +7,7 @@ use tonic::Status;
 
 mod remote;
 mod router_service;
-mod server;
+pub mod server;
 mod storage;
 
 use crate::protocol::PacketError;
@@ -40,7 +40,7 @@ pub enum RouterError {
 /// router is store the device_id with channel
 /// channel split local channel and remote channel.
 /// router shared between raft cluster
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Router {
     router: RouterId,
     local_address: String,

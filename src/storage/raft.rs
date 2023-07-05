@@ -1,4 +1,4 @@
-use crate::router::{RouterStorage, Value};
+use crate::router::{RouterId, RouterStorage, Value};
 use async_trait::async_trait;
 use openraft::storage::Adaptor;
 use openraft::{BasicNode, Config, Entry};
@@ -38,7 +38,7 @@ openraft::declare_raft_types!(
 
 pub struct RaftServer {
     raft: Option<RaftCore>,
-    server_addr: PathBuf,
+    server_addr: String,
     node_id: u64,
     // FIXME add config here
 }
@@ -46,19 +46,15 @@ pub struct RaftServer {
 // When main server start and before accept tcp connections, start the RaftStore.
 // Include start a raft server, check snapshot data to the router etc.
 impl RaftServer {
-    pub fn new(node_id: u64, server_addr: &str) -> RaftServer {
+    pub fn new(node_id: u64, server_addr: String) -> RaftServer {
         RaftServer {
             raft: None,
-            server_addr: server_addr.parse().unwrap(),
+            server_addr,
             node_id,
         }
     }
 
-    pub async fn start(
-        &mut self,
-        node_id: NodeId,
-        server_addr: &str,
-    ) -> Result<(), RaftStorageError> {
+    pub async fn start(&mut self) -> Result<(), RaftStorageError> {
         let config = Config {
             heartbeat_interval: 500,
             election_timeout_min: 1500,
@@ -74,11 +70,17 @@ impl RaftServer {
 
         let network = NetworkManager::new();
 
-        let raft = openraft::Raft::new(node_id, config.clone(), network, log_store, state_machine)
-            .await
-            .unwrap();
+        let raft = openraft::Raft::new(
+            self.node_id,
+            config.clone(),
+            network,
+            log_store,
+            state_machine,
+        )
+        .await
+        .unwrap();
         self.raft = Some(raft.clone());
-        start_raft_api_server(server_addr, raft).await?;
+        start_raft_api_server(self.server_addr.as_str(), raft).await?;
 
         Ok(())
     }
@@ -97,6 +99,10 @@ impl RouterStorage for RaftStorage {
     }
 
     async fn update_or_insert_channel_node(value: Value) -> Value {
+        todo!()
+    }
+
+    async fn router_lease(router: RouterId) -> Option<RouterId> {
         todo!()
     }
 }
