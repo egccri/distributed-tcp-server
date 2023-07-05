@@ -10,6 +10,7 @@ use openraft::{
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt::Debug;
+use std::io::Cursor;
 use std::ops::RangeBounds;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
@@ -59,7 +60,7 @@ pub struct Store {
     current_snapshot: RwLock<Option<StoreSnapshot>>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct StateMachine {
     pub last_applied_log: Option<LogId<NodeId>>,
 
@@ -69,7 +70,7 @@ pub struct StateMachine {
 }
 
 pub struct StoreSnapshot {
-    pub meta: SnapshotMeta<NodeId, ()>,
+    pub meta: SnapshotMeta<NodeId, Node>,
 
     /// The data of the state machine at the time of this snapshot.
     pub data: Vec<u8>,
@@ -109,21 +110,101 @@ impl StateMachine {
 #[async_trait]
 impl RaftLogReader<TypeConfig> for Arc<Store> {
     async fn get_log_state(&mut self) -> Result<LogState<TypeConfig>, StorageError<NodeId>> {
-        todo!()
+        let log = self.log.read().await;
+        let last_serialized = log.iter().rev().next().map(|(_, ent)| ent);
+
+        let last = match last_serialized {
+            None => None,
+            Some(serialized) => {
+                let ent: Entry<TypeConfig> =
+                    serde_json::from_str(serialized).map_err(|e| StorageIOError::read_logs(&e))?;
+                Some(*ent.get_log_id())
+            }
+        };
+
+        let last_purged = *self.last_purged_log_id.read().await;
+
+        let last = match last {
+            None => last_purged,
+            Some(x) => Some(x),
+        };
+
+        Ok(LogState {
+            last_purged_log_id: last_purged,
+            last_log_id: last,
+        })
     }
 
     async fn try_get_log_entries<RB: RangeBounds<u64> + Clone + Debug + Send + Sync>(
         &mut self,
         range: RB,
     ) -> Result<Vec<Entry<TypeConfig>>, StorageError<NodeId>> {
-        todo!()
+        let mut entries = vec![];
+        {
+            let log = self.log.read().await;
+            for (_, serialized) in log.range(range.clone()) {
+                let ent =
+                    serde_json::from_str(serialized).map_err(|e| StorageIOError::read_logs(&e))?;
+                entries.push(ent);
+            }
+        };
+
+        Ok(entries)
     }
 }
 
 #[async_trait]
 impl RaftSnapshotBuilder<TypeConfig> for Arc<Store> {
     async fn build_snapshot(&mut self) -> Result<Snapshot<TypeConfig>, StorageError<NodeId>> {
-        todo!()
+        let data;
+        let last_applied_log;
+        let last_membership;
+
+        {
+            // Serialize the data of the state machine.
+            let sm = self.state_machine.read().await;
+            data = serde_json::to_vec(&*sm).map_err(|e| StorageIOError::read_state_machine(&e))?;
+
+            last_applied_log = sm.last_applied_log;
+            last_membership = sm.last_membership.clone();
+        }
+
+        let snapshot_size = data.len();
+
+        let snapshot_idx = {
+            let mut l = self.snapshot_idx.lock().await;
+            *l += 1;
+            *l
+        };
+
+        let snapshot_id = if let Some(last) = last_applied_log {
+            format!("{}-{}-{}", last.leader_id, last.index, snapshot_idx)
+        } else {
+            format!("--{}", snapshot_idx)
+        };
+
+        let meta = SnapshotMeta {
+            last_log_id: last_applied_log,
+            last_membership,
+            snapshot_id,
+        };
+
+        let snapshot = StoreSnapshot {
+            meta: meta.clone(),
+            data: data.clone(),
+        };
+
+        {
+            let mut current_snapshot = self.current_snapshot.write().await;
+            *current_snapshot = Some(snapshot);
+        }
+
+        tracing::info!(snapshot_size, "log compaction complete");
+
+        Ok(Snapshot {
+            meta,
+            snapshot: Box::new(Cursor::new(data)),
+        })
     }
 }
 
@@ -259,12 +340,50 @@ impl RaftStorage<TypeConfig> for Arc<Store> {
         meta: &SnapshotMeta<NodeId, Node>,
         snapshot: Box<<TypeConfig as RaftTypeConfig>::SnapshotData>,
     ) -> Result<(), StorageError<NodeId>> {
-        todo!()
+        tracing::info!(
+            { snapshot_size = snapshot.get_ref().len() },
+            "decoding snapshot for installation"
+        );
+
+        let new_snapshot = StoreSnapshot {
+            meta: meta.clone(),
+            data: snapshot.into_inner(),
+        };
+
+        {
+            let t = &new_snapshot.data;
+            let y = std::str::from_utf8(t).unwrap();
+            tracing::debug!("SNAP META:{:?}", meta);
+            tracing::debug!("JSON SNAP DATA:{}", y);
+        }
+
+        // Update the state machine.
+        {
+            let new_sm: StateMachine = serde_json::from_slice(&new_snapshot.data).map_err(|e| {
+                StorageIOError::read_snapshot(Some(new_snapshot.meta.signature()), &e)
+            })?;
+            let mut sm = self.state_machine.write().await;
+            *sm = new_sm;
+        }
+
+        // Update current snapshot.
+        let mut current_snapshot = self.current_snapshot.write().await;
+        *current_snapshot = Some(new_snapshot);
+        Ok(())
     }
 
     async fn get_current_snapshot(
         &mut self,
     ) -> Result<Option<Snapshot<TypeConfig>>, StorageError<NodeId>> {
-        todo!()
+        match &*self.current_snapshot.read().await {
+            Some(snapshot) => {
+                let data = snapshot.data.clone();
+                Ok(Some(Snapshot {
+                    meta: snapshot.meta.clone(),
+                    snapshot: Box::new(Cursor::new(data)),
+                }))
+            }
+            None => Ok(None),
+        }
     }
 }

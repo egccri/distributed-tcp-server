@@ -54,6 +54,7 @@ impl RaftServer {
         }
     }
 
+    // FIXME how to add init raft servers.
     pub async fn start(&mut self) -> Result<(), RaftStorageError> {
         let config = Config {
             heartbeat_interval: 500,
