@@ -2,7 +2,6 @@ use crate::config::ServerConfig;
 use crate::protocol::packets::Packet;
 use crate::protocol::PacketError;
 use crate::router::server::RouterServer;
-use crate::router::Router;
 use crate::server::broker::BrokerServer;
 use crate::server::session::SharedSession;
 use crate::storage::raft::RaftServer;
@@ -38,14 +37,17 @@ pub async fn start(
     let raft_node_id = raft_config.node_id;
     let raft_network_addr = raft_config.raft_network_addr.clone();
     let mut raft_storage = RaftServer::new(raft_node_id, raft_network_addr.clone());
+    let mut raft_storage_clone = raft_storage.clone();
     info!(
         "Raft Storage {} starting with cli config addr: {}",
         raft_node_id, raft_network_addr
     );
     tokio::spawn(async move {
         // FIXME error handle
-        let _ = raft_storage.start().await;
+        let _ = raft_storage_clone.start().await;
     });
+
+    raft_storage.init().await;
 
     let router_id = server_config.router.router_id;
     let router_server_addr = server_config.router.router_server_addr.clone();

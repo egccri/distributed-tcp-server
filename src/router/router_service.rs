@@ -3,6 +3,8 @@
 #[derive(Clone, PartialEq, ::prost::Message)]
 pub struct RouterRequest {
     #[prost(string, tag = "1")]
+    pub channel_id: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
     pub packet: ::prost::alloc::string::String,
 }
 #[allow(clippy::derive_partial_eq_without_eq)]

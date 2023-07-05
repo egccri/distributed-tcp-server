@@ -7,7 +7,8 @@ service RouterService {
 
 // messaging is serde with from ot into string,depends on your packet
 message RouterRequest {
-  string packet = 1;
+  string channel_id = 1;
+  string packet = 2;
 }
 
 message RouterReply {

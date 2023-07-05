@@ -2,6 +2,7 @@ use crate::protocol::packets::Packet;
 use crate::router::router_service::router_service_client::RouterServiceClient;
 use crate::router::router_service::RouterRequest;
 use crate::router::{RouterError, RouterId};
+use crate::server::channel::ChannelId;
 use std::collections::HashMap;
 use std::net::{IpAddr, Ipv4Addr};
 use std::sync::Arc;
@@ -42,7 +43,11 @@ impl RouterGrpcClient {
         self.endpoint.connect().await.ok()
     }
 
-    async fn send_packet(&self, packet: Packet) -> Result<Packet, RouterError> {
+    async fn send_packet(
+        &self,
+        channel_id: ChannelId,
+        packet: Packet,
+    ) -> Result<Packet, RouterError> {
         let raw = packet.write()?;
 
         let reply = {
@@ -51,7 +56,10 @@ impl RouterGrpcClient {
                 .clone()
                 .ok_or_else(|| RouterError::ChannelConnectError)?;
             let mut client = RouterServiceClient::new(channel);
-            let message = RouterRequest { packet: raw };
+            let message = RouterRequest {
+                channel_id: channel_id.into(),
+                packet: raw,
+            };
             let reply = client
                 .send_packet(tonic::Request::new(message))
                 .await
@@ -102,30 +110,32 @@ impl Remotes {
 
     pub async fn send_packet(&mut self, packet: Packet) -> Result<Packet, RouterError> {
         // TODO find packet owns node in the storage
+        let channel_id = ChannelId::generate();
         let router_id: RouterId = 1;
         let router_addr: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
         // find RouterGrpcClient
         let reply = self
-            .find_router_and_send(router_id, router_addr, packet)
+            .find_router_and_send(channel_id, router_id, router_addr, packet)
             .await?;
         Ok(reply)
     }
 
     pub async fn find_router_and_send(
         &mut self,
+        channel_id: ChannelId,
         router_id: RouterId,
         router_addr: IpAddr,
         packet: Packet,
     ) -> Result<Packet, RouterError> {
         if let Some((a, b)) = self.inner.read().await.get(&router_id) {
             if *a == router_addr {
-                return Ok(b.send_packet(packet).await?);
+                return Ok(b.send_packet(channel_id.clone(), packet).await?);
             }
         };
         let reply = self
             .create_client(router_id, router_addr)
             .await?
-            .send_packet(packet.clone())
+            .send_packet(channel_id.clone(), packet.clone())
             .await?;
         Ok(reply)
     }

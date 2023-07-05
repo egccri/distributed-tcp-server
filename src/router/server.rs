@@ -1,9 +1,10 @@
-use std::path::PathBuf;
 // A grpc server that used for transfer income operation that need send packet to the remote.
+use crate::protocol::packets::Packet;
 use crate::router::remote::Remotes;
 use crate::router::router_service::router_service_server::{RouterService, RouterServiceServer};
 use crate::router::router_service::{RouterReply, RouterRequest};
 use crate::router::{RouterError, RouterId};
+use crate::server::channel::ChannelId;
 use crate::server::session::SharedSession;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
@@ -54,6 +55,12 @@ impl RouterService for RouterSvc {
         &self,
         request: Request<RouterRequest>,
     ) -> Result<Response<RouterReply>, Status> {
-        todo!()
+        let request = request.into_inner();
+        let packet: Packet = Packet::read(request.packet).unwrap();
+        let channel_id = ChannelId::from(request.channel_id);
+        self.local_session.send(&channel_id, packet.clone()).await;
+        Ok(Response::new(RouterReply {
+            packet: packet.write().unwrap(),
+        }))
     }
 }
