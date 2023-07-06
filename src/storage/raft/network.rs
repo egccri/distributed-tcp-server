@@ -3,7 +3,7 @@ use super::{Node, NodeId};
 use crate::storage::raft::raft_service::raft_service_client::RaftServiceClient;
 use crate::storage::raft::raft_service::RaftRequest;
 use openraft::async_trait::async_trait;
-use openraft::error::{InstallSnapshotError, NetworkError, RPCError, RaftError};
+use openraft::error::{InstallSnapshotError, NetworkError, RPCError, RaftError, RemoteError};
 use openraft::raft::{
     AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest, InstallSnapshotResponse,
     VoteRequest, VoteResponse,
@@ -62,9 +62,10 @@ impl NetworkManager {
             .append_entries(tonic::Request::new(request))
             .await
             .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
-        let result = serde_json::from_str(result.into_inner().data.as_str())
-            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
-        result
+        let result: Result<AppendEntriesResponse<NodeId>, RaftError<NodeId>> =
+            serde_json::from_str(result.into_inner().data.as_str())
+                .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        result.map_err(|e| RPCError::RemoteError(RemoteError::new(target, e)))
     }
 
     pub async fn send_install_snapshot(
@@ -88,9 +89,12 @@ impl NetworkManager {
             .install_snapshot(tonic::Request::new(request))
             .await
             .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
-        let result = serde_json::from_str(result.into_inner().data.as_str())
+        let result: Result<
+            InstallSnapshotResponse<NodeId>,
+            RaftError<NodeId, InstallSnapshotError>,
+        > = serde_json::from_str(result.into_inner().data.as_str())
             .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
-        result
+        result.map_err(|e| RPCError::RemoteError(RemoteError::new(target, e)))
     }
 
     pub async fn send_vote(
@@ -111,9 +115,10 @@ impl NetworkManager {
             .vote(tonic::Request::new(request))
             .await
             .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
-        let result = serde_json::from_str(result.into_inner().data.as_str())
-            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
-        result
+        let result: Result<VoteResponse<NodeId>, RaftError<NodeId>> =
+            serde_json::from_str(result.into_inner().data.as_str())
+                .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        result.map_err(|e| RPCError::RemoteError(RemoteError::new(target, e)))
     }
 }
 

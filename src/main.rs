@@ -1,5 +1,6 @@
 use ::config::{Config, File};
 use clap::Parser;
+use openraft::testing::StoreBuilder;
 use time::UtcOffset;
 use tracing::{info, Level};
 use tracing_subscriber::fmt::time::OffsetTime;
@@ -36,7 +37,7 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer().with_timer(timer.clone()))
         .with(
             tracing_subscriber::fmt::layer()
-                .with_writer(daily_no_blocking)
+                .with_writer(daily_no_blocking.with_max_level(Level::INFO))
                 .with_ansi(false)
                 .with_timer(timer.clone()),
         )

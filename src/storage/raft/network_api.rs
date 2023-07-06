@@ -8,6 +8,7 @@ use crate::storage::raft::RaftCore;
 use crate::storage::RaftStorageError;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
+use tracing::info;
 
 // raft network api impl with grpc server
 pub async fn start_raft_api_server(
@@ -46,6 +47,7 @@ impl RaftService for RaftSvc {
         request: Request<RaftRequest>,
     ) -> Result<Response<RaftReply>, Status> {
         let request = request.into_inner().data;
+        info!("Received append entries call with payload {}", &request);
         let rpc = serde_json::from_str(request.as_str())
             .map_err(|err| Status::internal("serde from request string error!"))?;
         let res = self.raft_core.append_entries(rpc).await;
@@ -59,6 +61,7 @@ impl RaftService for RaftSvc {
         request: Request<RaftRequest>,
     ) -> Result<Response<RaftReply>, Status> {
         let request = request.into_inner().data;
+        info!("Received install snapshot call with payload {}", &request);
         let rpc = serde_json::from_str(request.as_str())
             .map_err(|err| Status::internal("serde from request string error!"))?;
 
@@ -70,6 +73,7 @@ impl RaftService for RaftSvc {
 
     async fn vote(&self, request: Request<RaftRequest>) -> Result<Response<RaftReply>, Status> {
         let request = request.into_inner().data;
+        info!("Received vote call with payload {}", &request);
         let rpc = serde_json::from_str(request.as_str())
             .map_err(|err| Status::internal("serde from request string error!"))?;
         let res = self.raft_core.vote(rpc).await;
