@@ -95,10 +95,11 @@ impl RaftServer {
         members.insert(self.node_id);
         // FIXME error handle
         if let Some(raft) = self.clone().raft {
-            let _ = raft
-                .add_learner(self.node_id, BasicNode::new(self.server_addr.clone()), true)
-                .await;
-            let _ = raft.change_membership(members, false).await;
+            // let _ = raft
+            //     .add_learner(self.node_id, BasicNode::new(self.server_addr.clone()), true)
+            //     .await;
+            // let _ = raft.change_membership(members, false).await;
+            let _ = raft.initialize(nodes).await.unwrap();
         }
     }
 }
