@@ -11,4 +11,10 @@ pub enum RaftStorageError {
 
     #[error("Raft server api start error: cause by {0}")]
     TonicServerError(#[from] Error),
+
+    #[error("Raft fatal or api error : cause by: {0}")]
+    RaftError(String),
+
+    #[error("Raft core is None")]
+    RaftServerRaftCoreIsNone,
 }

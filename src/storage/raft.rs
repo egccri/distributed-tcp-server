@@ -5,7 +5,6 @@ use openraft::{BasicNode, Config, Entry};
 use std::collections::BTreeMap;
 use std::io::Cursor;
 use std::sync::Arc;
-use tracing::info;
 
 use crate::server::channel::ChannelId;
 use crate::storage::raft::network::NetworkManager;
@@ -37,12 +36,13 @@ openraft::declare_raft_types!(
     Entry = Entry<TypeConfig>, SnapshotData = Cursor<Vec<u8>>
 );
 
+// Close is cheap, because of Raft clone is cheap.
 #[derive(Clone)]
 pub struct RaftServer {
     raft: Option<RaftCore>,
     server_addr: String,
     node_id: u64,
-    // FIXME add config here
+    // FIXME add more config here
 }
 
 // When main server start and before accept tcp connections, start the RaftStore.
@@ -56,7 +56,7 @@ impl RaftServer {
         }
     }
 
-    // FIXME how to add init raft servers.
+    // init nodes config in config file
     pub async fn start(&mut self) -> Result<(), RaftStorageError> {
         let config = Config {
             heartbeat_interval: 500,
@@ -68,7 +68,6 @@ impl RaftServer {
         let config = Arc::new(config.validate().unwrap());
 
         let store = Arc::new(Store::new());
-
         let (log_store, state_machine) = Adaptor::new(store.clone());
 
         let network = NetworkManager::new();
@@ -81,34 +80,30 @@ impl RaftServer {
             state_machine,
         )
         .await
-        .unwrap();
+        .map_err(|err| RaftStorageError::RaftError(serde_json::to_string(&err).unwrap()))?;
+
         self.raft = Some(raft.clone());
 
-        info!("Raft cluster init.");
-        self.init().await;
+        self.init().await?;
 
         start_raft_api_server(self.server_addr.as_str(), raft).await?;
 
         Ok(())
     }
 
-    pub async fn init(&self) {
+    pub async fn init(&self) -> Result<(), RaftStorageError> {
         let mut nodes = BTreeMap::new();
-        nodes.insert(1, BasicNode::new("0.0.0.0:9091"));
-        nodes.insert(2, BasicNode::new("0.0.0.0:9092"));
-        nodes.insert(3, BasicNode::new("0.0.0.0:9093"));
+        nodes.insert(1, Node::new("0.0.0.0:9091"));
+        nodes.insert(2, Node::new("0.0.0.0:9092"));
+        nodes.insert(3, Node::new("0.0.0.0:9093"));
 
-        // FIXME error handle
-        if let Some(raft) = self.clone().raft {
-            info!("Initialize raft nodes.");
-            // let _ = raft
-            //     .add_learner(self.node_id, BasicNode::new(self.server_addr.clone()), true)
-            //     .await;
-            // let mut members = BTreeSet::new();
-            // members.insert(self.node_id);
-            // let _ = raft.change_membership(members, false).await;
-            let _ = raft.initialize(nodes).await.unwrap();
-        }
+        Ok(self
+            .raft
+            .clone()
+            .ok_or_else(|| RaftStorageError::RaftServerRaftCoreIsNone)?
+            .initialize(nodes)
+            .await
+            .map_err(|err| RaftStorageError::RaftError(err.to_string()))?)
     }
 }
 

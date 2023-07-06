@@ -9,12 +9,11 @@ use openraft::raft::{
     VoteRequest, VoteResponse,
 };
 use openraft::{RaftNetwork, RaftNetworkFactory, RaftTypeConfig};
+use tracing::{debug, info};
 
 // 无状态？
 #[derive(Debug, Clone)]
-pub struct NetworkManager {
-    // FIXME Grpc client channel with pool
-}
+pub struct NetworkManager {}
 
 #[derive(Debug)]
 pub struct Network {
@@ -47,62 +46,74 @@ impl NetworkManager {
 
     pub async fn send_append_entries(
         &self,
-        json: String,
+        payload: String,
         target: NodeId,
         target_node: Node,
     ) -> Result<AppendEntriesResponse<NodeId>, RPCError<NodeId, Node, RaftError<NodeId>>> {
+        info!(
+            "Send append entries call to [target: {}, node: {}], with payload {}",
+            target, &target_node, &payload
+        );
         let mut client = RaftServiceClient::connect(format!("http://{}", target_node.addr))
             .await
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
-        let request = RaftRequest { data: json };
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        let request = RaftRequest { data: payload };
         let result = client
             .append_entries(tonic::Request::new(request))
             .await
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         let result = serde_json::from_str(result.into_inner().data.as_str())
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
-        Ok(result)
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        result
     }
 
     pub async fn send_install_snapshot(
         &self,
-        json: String,
+        payload: String,
         target: NodeId,
         target_node: Node,
     ) -> Result<
         InstallSnapshotResponse<NodeId>,
         RPCError<NodeId, Node, RaftError<NodeId, InstallSnapshotError>>,
     > {
+        info!(
+            "Send install snapshot call to [target: {}, node: {}], with payload {}",
+            target, &target_node, &payload
+        );
         let mut client = RaftServiceClient::connect(format!("http://{}", target_node.addr))
             .await
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
-        let request = RaftRequest { data: json };
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        let request = RaftRequest { data: payload };
         let result = client
             .install_snapshot(tonic::Request::new(request))
             .await
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         let result = serde_json::from_str(result.into_inner().data.as_str())
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
-        Ok(result)
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        result
     }
 
     pub async fn send_vote(
         &self,
-        json: String,
+        payload: String,
         target: NodeId,
         target_node: Node,
     ) -> Result<VoteResponse<NodeId>, RPCError<NodeId, Node, RaftError<NodeId>>> {
+        info!(
+            "Send vote call to [target: {}, node: {}], with payload {}",
+            target, &target_node, &payload
+        );
         let mut client = RaftServiceClient::connect(format!("http://{}", target_node.addr))
             .await
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
-        let request = RaftRequest { data: json };
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        let request = RaftRequest { data: payload };
         let result = client
             .vote(tonic::Request::new(request))
             .await
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
         let result = serde_json::from_str(result.into_inner().data.as_str())
-            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
-        Ok(result)
+            .map_err(|e| RPCError::Network(NetworkError::new(&e)))?;
+        result
     }
 }
 
