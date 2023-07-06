@@ -353,8 +353,8 @@ impl RaftStorage<TypeConfig> for Arc<Store> {
         {
             let t = &new_snapshot.data;
             let y = std::str::from_utf8(t).unwrap();
-            tracing::debug!("SNAP META:{:?}", meta);
-            tracing::debug!("JSON SNAP DATA:{}", y);
+            debug!("SNAP META:{:?}", meta);
+            debug!("JSON SNAP DATA:{}", y);
         }
 
         // Update the state machine.

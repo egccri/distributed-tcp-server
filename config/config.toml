@@ -7,7 +7,7 @@ router_server_addr = "0.0.0.0:50001"
 keep_alive_timeout = 30
 
 [raft]
-node_id = 1
+node_id = 0
 raft_network_addr = "0.0.0.0:9094"
 heartbeat_interval = 500
 election_timeout_min = 1500

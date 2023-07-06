@@ -2,7 +2,7 @@ use crate::router::{RouterId, RouterStorage, Value};
 use async_trait::async_trait;
 use openraft::storage::Adaptor;
 use openraft::{BasicNode, Config, Entry};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::Cursor;
 use std::sync::Arc;
 
@@ -88,16 +88,17 @@ impl RaftServer {
     }
 
     pub async fn init(&self) {
+        let node = BasicNode::new(self.server_addr.clone());
         let mut nodes = BTreeMap::new();
-        nodes.insert(
-            self.node_id,
-            BasicNode {
-                addr: self.server_addr.clone(),
-            },
-        );
+        nodes.insert(self.node_id, node);
+        let mut members = BTreeSet::new();
+        members.insert(self.node_id);
         // FIXME error handle
         if let Some(raft) = self.clone().raft {
-            let _ = raft.initialize(nodes).await;
+            let _ = raft
+                .add_learner(self.node_id, BasicNode::new(self.server_addr.clone()), true)
+                .await;
+            let _ = raft.change_membership(members, false).await;
         }
     }
 }

@@ -39,7 +39,7 @@ pub async fn start(
     let mut raft_storage = RaftServer::new(raft_node_id, raft_network_addr.clone());
     let mut raft_storage_clone = raft_storage.clone();
     info!(
-        "Raft Storage {} starting with cli config addr: {}",
+        "Raft Storage Server {} starting with cli config addr: {}",
         raft_node_id, raft_network_addr
     );
     tokio::spawn(async move {
@@ -47,6 +47,7 @@ pub async fn start(
         let _ = raft_storage_clone.start().await;
     });
 
+    info!("Raft cluster init.");
     raft_storage.init().await;
 
     let router_id = server_config.router.router_id;

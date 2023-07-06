@@ -45,18 +45,39 @@ impl RaftService for RaftSvc {
         &self,
         request: Request<RaftRequest>,
     ) -> Result<Response<RaftReply>, Status> {
-        todo!()
+        let request = request.into_inner().data;
+        let rpc = serde_json::from_str(request.as_str()).unwrap();
+        let res = self.raft_core.append_entries(rpc).await.unwrap();
+        let reply = serde_json::to_string(&res).unwrap();
+        Ok(Response::new(RaftReply {
+            data: reply,
+            error: "".to_string(),
+        }))
     }
 
     async fn install_snapshot(
         &self,
         request: Request<RaftRequest>,
     ) -> Result<Response<RaftReply>, Status> {
-        todo!()
+        let request = request.into_inner().data;
+        let rpc = serde_json::from_str(request.as_str()).unwrap();
+        let res = self.raft_core.install_snapshot(rpc).await.unwrap();
+        let reply = serde_json::to_string(&res).unwrap();
+        Ok(Response::new(RaftReply {
+            data: reply,
+            error: "".to_string(),
+        }))
     }
 
     async fn vote(&self, request: Request<RaftRequest>) -> Result<Response<RaftReply>, Status> {
-        todo!()
+        let request = request.into_inner().data;
+        let rpc = serde_json::from_str(request.as_str()).unwrap();
+        let res = self.raft_core.vote(rpc).await.unwrap();
+        let reply = serde_json::to_string(&res).unwrap();
+        Ok(Response::new(RaftReply {
+            data: reply,
+            error: "".to_string(),
+        }))
     }
 }
 
