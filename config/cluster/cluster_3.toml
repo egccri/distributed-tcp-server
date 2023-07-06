@@ -1,14 +1,14 @@
 server_name = "iot-server"
-bind_address = "0.0.0.0:9990"
+bind_address = "0.0.0.0:9993"
 
 [router]
 router_id = 1
-router_server_addr = "0.0.0.0:50000"
+router_server_addr = "0.0.0.0:50003"
 keep_alive_timeout = 30
 
 [raft]
 node_id = 1
-raft_network_addr = "0.0.0.0:9090"
+raft_network_addr = "0.0.0.0:9093"
 heartbeat_interval = 500
 election_timeout_min = 1500
 election_timeout_max = 3000

@@ -2,9 +2,10 @@ use crate::router::{RouterId, RouterStorage, Value};
 use async_trait::async_trait;
 use openraft::storage::Adaptor;
 use openraft::{BasicNode, Config, Entry};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::BTreeMap;
 use std::io::Cursor;
 use std::sync::Arc;
+use tracing::info;
 
 use crate::server::channel::ChannelId;
 use crate::storage::raft::network::NetworkManager;
@@ -82,22 +83,29 @@ impl RaftServer {
         .await
         .unwrap();
         self.raft = Some(raft.clone());
+
+        info!("Raft cluster init.");
+        self.init().await;
+
         start_raft_api_server(self.server_addr.as_str(), raft).await?;
 
         Ok(())
     }
 
     pub async fn init(&self) {
-        let node = BasicNode::new(self.server_addr.clone());
         let mut nodes = BTreeMap::new();
-        nodes.insert(self.node_id, node);
-        let mut members = BTreeSet::new();
-        members.insert(self.node_id);
+        nodes.insert(1, BasicNode::new("0.0.0.0:9091"));
+        nodes.insert(2, BasicNode::new("0.0.0.0:9092"));
+        nodes.insert(3, BasicNode::new("0.0.0.0:9093"));
+
         // FIXME error handle
         if let Some(raft) = self.clone().raft {
+            info!("Initialize raft nodes.");
             // let _ = raft
             //     .add_learner(self.node_id, BasicNode::new(self.server_addr.clone()), true)
             //     .await;
+            // let mut members = BTreeSet::new();
+            // members.insert(self.node_id);
             // let _ = raft.change_membership(members, false).await;
             let _ = raft.initialize(nodes).await.unwrap();
         }

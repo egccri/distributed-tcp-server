@@ -6,6 +6,7 @@ use crate::server::broker::BrokerServer;
 use crate::server::session::SharedSession;
 use crate::storage::raft::RaftServer;
 use std::io;
+use std::time::Duration;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio_util::codec::LinesCodecError;
@@ -47,8 +48,7 @@ pub async fn start(
         let _ = raft_storage_clone.start().await;
     });
 
-    info!("Raft cluster init.");
-    raft_storage.init().await;
+    tokio::time::sleep(Duration::from_secs(2)).await;
 
     let router_id = server_config.router.router_id;
     let router_server_addr = server_config.router.router_server_addr.clone();

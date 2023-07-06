@@ -3,7 +3,7 @@ use super::{Node, NodeId};
 use crate::storage::raft::raft_service::raft_service_client::RaftServiceClient;
 use crate::storage::raft::raft_service::RaftRequest;
 use openraft::async_trait::async_trait;
-use openraft::error::{InstallSnapshotError, RPCError, RaftError};
+use openraft::error::{InstallSnapshotError, NetworkError, RPCError, RaftError};
 use openraft::raft::{
     AppendEntriesRequest, AppendEntriesResponse, InstallSnapshotRequest, InstallSnapshotResponse,
     VoteRequest, VoteResponse,
@@ -51,14 +51,16 @@ impl NetworkManager {
         target: NodeId,
         target_node: Node,
     ) -> Result<AppendEntriesResponse<NodeId>, RPCError<NodeId, Node, RaftError<NodeId>>> {
-        // FIXME map error to the RPCError.
-        let mut client = RaftServiceClient::connect(target_node.addr).await.unwrap();
+        let mut client = RaftServiceClient::connect(format!("http://{}", target_node.addr))
+            .await
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
         let request = RaftRequest { data: json };
         let result = client
             .append_entries(tonic::Request::new(request))
             .await
-            .unwrap();
-        let result = serde_json::from_str(result.into_inner().data.as_str()).unwrap();
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
+        let result = serde_json::from_str(result.into_inner().data.as_str())
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
         Ok(result)
     }
 
@@ -71,14 +73,16 @@ impl NetworkManager {
         InstallSnapshotResponse<NodeId>,
         RPCError<NodeId, Node, RaftError<NodeId, InstallSnapshotError>>,
     > {
-        // FIXME map error to the RPCError.
-        let mut client = RaftServiceClient::connect(target_node.addr).await.unwrap();
+        let mut client = RaftServiceClient::connect(format!("http://{}", target_node.addr))
+            .await
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
         let request = RaftRequest { data: json };
         let result = client
             .install_snapshot(tonic::Request::new(request))
             .await
-            .unwrap();
-        let result = serde_json::from_str(result.into_inner().data.as_str()).unwrap();
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
+        let result = serde_json::from_str(result.into_inner().data.as_str())
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
         Ok(result)
     }
 
@@ -88,11 +92,16 @@ impl NetworkManager {
         target: NodeId,
         target_node: Node,
     ) -> Result<VoteResponse<NodeId>, RPCError<NodeId, Node, RaftError<NodeId>>> {
-        // FIXME map error to the RPCError.
-        let mut client = RaftServiceClient::connect(target_node.addr).await.unwrap();
+        let mut client = RaftServiceClient::connect(format!("http://{}", target_node.addr))
+            .await
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
         let request = RaftRequest { data: json };
-        let result = client.vote(tonic::Request::new(request)).await.unwrap();
-        let result = serde_json::from_str(result.into_inner().data.as_str()).unwrap();
+        let result = client
+            .vote(tonic::Request::new(request))
+            .await
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
+        let result = serde_json::from_str(result.into_inner().data.as_str())
+            .map_err(|e| openraft::error::RPCError::Network(NetworkError::new(&e)))?;
         Ok(result)
     }
 }
