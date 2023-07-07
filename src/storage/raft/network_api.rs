@@ -42,6 +42,7 @@ impl RaftService for RaftSvc {
         todo!()
     }
 
+    // append_entries:call_core: openraft::raft: failure sending tx to RaftCore; message: AppendEntries: vote=4-1:committed, prev_log_id=None, leader_commit=None, entries=[0-0-0:membership: voters:[{1:{BasicNode { addr: "0.0.0.0:9091" }},2:{BasicNode { addr: "0.0.0.0:9092" }},3:{BasicNode { addr: "0.0.0.0:9093" }}}], learners:[],4-1-1:blank] core_result=Err(Panicked)
     async fn append_entries(
         &self,
         request: Request<RaftRequest>,

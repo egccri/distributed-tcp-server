@@ -94,8 +94,8 @@ impl RaftServer {
     pub async fn init(&self) -> Result<(), RaftStorageError> {
         let mut nodes = BTreeMap::new();
         nodes.insert(1, Node::new("0.0.0.0:9091"));
-        nodes.insert(2, Node::new("0.0.0.0:9092"));
-        nodes.insert(3, Node::new("0.0.0.0:9093"));
+        // nodes.insert(2, Node::new("0.0.0.0:9092"));
+        // nodes.insert(3, Node::new("0.0.0.0:9093"));
 
         Ok(self
             .raft

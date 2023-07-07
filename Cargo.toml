@@ -8,7 +8,8 @@ authors = ["zifeng.1024@gmail.com"]
 
 [workspace]
 members = [
-    "crates/egccri-future-util"
+    "crates/egccri-future-util",
+    "crates/common/pool",
 ]
 
 [dependencies]
