@@ -1,8 +1,6 @@
 use pool::MutexPool;
-use tonic::codegen::http::request;
 use tonic::transport::Channel;
 
-// FIXME support concurrent
 #[tokio::main]
 async fn main() {
     let channel_builder = ChannelBuilder;

@@ -5,14 +5,20 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 
+// FIXME support concurrent items per token and retry build.
+// FIXME Add check item alive policy.
 #[async_trait::async_trait]
 pub trait PoolItemBuilder: Clone {
     type Token;
     type Item;
     type Error;
 
-    // FIXME support concurrent items per token and retry build
     async fn build(&self, token: &Self::Token) -> Result<Self::Item, Self::Error>;
+
+    /// When check is false, pool remove item.
+    async fn check(&self) -> Result<bool, Self::Error> {
+        todo!()
+    }
 }
 
 #[derive(Debug)]
