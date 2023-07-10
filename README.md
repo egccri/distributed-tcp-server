@@ -3,7 +3,16 @@ An iot server that bridge between the private tcp protocol device and egccri.
 
 _[WIP] Distributed version use openraft._
 
-#### How it worked.
+#### Quick start
+
+```shell
+cargo build
+./target/debug/iot-server-template -c ./config/cluster/cluster_1.toml
+./target/debug/iot-server-template -c ./config/cluster/cluster_2.toml
+./target/debug/iot-server-template -c ./config/cluster/cluster_3.toml
+```
+
+#### How tcp server worked.
 
 ![how it worked](asserts/imgs/img.png)
 
@@ -17,13 +26,6 @@ Raft storage is an optional embedded distribute storage for the cluster router c
  
 The other way is redis.
 
-#### RPC calls
+##### Raft storage RPC calls
 
 ![RPC calls](asserts/imgs/rpcs.png)
-
-#### Quick start
-
-```shell
-cargo build
-./target/debug/iot-server-template -c ./config/config.toml
-```
