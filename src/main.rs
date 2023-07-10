@@ -34,7 +34,12 @@ async fn main() -> anyhow::Result<()> {
     let offset = UtcOffset::current_local_offset().expect("should not get local offset!");
     let timer = OffsetTime::new(offset, time::format_description::well_known::Rfc3339);
     let layers = tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_timer(timer.clone()))
+        .with(
+            tracing_subscriber::fmt::layer()
+                .with_timer(timer.clone())
+                .with_writer(std::io::stdout.with_max_level(Level::INFO))
+                .pretty(),
+        )
         .with(
             tracing_subscriber::fmt::layer()
                 .with_writer(daily_no_blocking.with_max_level(Level::INFO))
