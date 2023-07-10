@@ -30,6 +30,22 @@ pub type LogStore = Adaptor<TypeConfig, Arc<Store>>;
 pub type StateMachineStore = Adaptor<TypeConfig, Arc<Store>>;
 pub type RaftCore = openraft::Raft<TypeConfig, NetworkManager, LogStore, StateMachineStore>;
 
+pub mod error {
+    use crate::storage::raft::{Node, NodeId};
+
+    pub type RPCError<E> = openraft::error::RPCError<NodeId, Node, E>;
+    pub type RaftError<E = openraft::error::Infallible> = openraft::error::RaftError<NodeId, E>;
+    pub type NetworkError = openraft::error::NetworkError;
+
+    pub type StorageError = openraft::StorageError<NodeId>;
+    pub type StorageIOError = openraft::StorageIOError<NodeId>;
+    pub type ForwardToLeader = openraft::error::ForwardToLeader<NodeId, Node>;
+    pub type Fatal = openraft::error::Fatal<NodeId>;
+    pub type ChangeMembershipError = openraft::error::ChangeMembershipError<NodeId>;
+    pub type ClientWriteError = openraft::error::ClientWriteError<NodeId, Node>;
+    pub type InitializeError = openraft::error::InitializeError<NodeId, Node>;
+}
+
 openraft::declare_raft_types!(
     /// Declare the type configuration for example K/V store.
     pub TypeConfig: D = Request, R = Response, NodeId = NodeId, Node = Node,
@@ -94,8 +110,8 @@ impl RaftServer {
     pub async fn init(&self) -> Result<(), RaftStorageError> {
         let mut nodes = BTreeMap::new();
         nodes.insert(1, Node::new("0.0.0.0:9091"));
-        // nodes.insert(2, Node::new("0.0.0.0:9092"));
-        // nodes.insert(3, Node::new("0.0.0.0:9093"));
+        nodes.insert(2, Node::new("0.0.0.0:9092"));
+        nodes.insert(3, Node::new("0.0.0.0:9093"));
 
         Ok(self
             .raft

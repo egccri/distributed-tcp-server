@@ -50,10 +50,13 @@ impl RaftService for RaftSvc {
         let request = request.into_inner().data;
         info!("Received append entries call with payload {}", &request);
         let rpc = serde_json::from_str(request.as_str())
-            .map_err(|err| Status::internal("serde from request string error!"))?;
-        let res = self.raft_core.append_entries(rpc).await;
-        let reply = serde_json::to_string(&res)
-            .map_err(|err| Status::internal("serde from request string error!"))?;
+            .map_err(|err| Status::internal(err.to_string()))?;
+        let res = self
+            .raft_core
+            .append_entries(rpc)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+        let reply = serde_json::to_string(&res).map_err(|err| Status::internal(err.to_string()))?;
         Ok(Response::new(RaftReply { data: reply }))
     }
 
@@ -64,11 +67,13 @@ impl RaftService for RaftSvc {
         let request = request.into_inner().data;
         info!("Received install snapshot call with payload {}", &request);
         let rpc = serde_json::from_str(request.as_str())
-            .map_err(|err| Status::internal("serde from request string error!"))?;
-
-        let res = self.raft_core.install_snapshot(rpc).await;
-        let reply = serde_json::to_string(&res)
-            .map_err(|err| Status::internal("serde from request string error!"))?;
+            .map_err(|err| Status::internal(err.to_string()))?;
+        let res = self
+            .raft_core
+            .install_snapshot(rpc)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+        let reply = serde_json::to_string(&res).map_err(|err| Status::internal(err.to_string()))?;
         Ok(Response::new(RaftReply { data: reply }))
     }
 
@@ -76,10 +81,13 @@ impl RaftService for RaftSvc {
         let request = request.into_inner().data;
         info!("Received vote call with payload {}", &request);
         let rpc = serde_json::from_str(request.as_str())
-            .map_err(|err| Status::internal("serde from request string error!"))?;
-        let res = self.raft_core.vote(rpc).await;
-        let reply = serde_json::to_string(&res)
-            .map_err(|err| Status::internal("serde from request string error!"))?;
+            .map_err(|err| Status::internal(err.to_string()))?;
+        let res = self
+            .raft_core
+            .vote(rpc)
+            .await
+            .map_err(|err| Status::internal(err.to_string()))?;
+        let reply = serde_json::to_string(&res).map_err(|err| Status::internal(err.to_string()))?;
         Ok(Response::new(RaftReply { data: reply }))
     }
 }

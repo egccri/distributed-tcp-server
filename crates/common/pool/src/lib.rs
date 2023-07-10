@@ -21,7 +21,7 @@ pub trait PoolItemBuilder: Clone {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MutexPool<ItemBuilder: PoolItemBuilder + Debug> {
     inner: Arc<Mutex<HashMap<ItemBuilder::Token, ItemBuilder::Item>>>,
 
@@ -30,6 +30,7 @@ pub struct MutexPool<ItemBuilder: PoolItemBuilder + Debug> {
     retry_build_config: Option<RetryConfig>,
 }
 
+#[derive(Debug, Clone)]
 pub struct RwLockPool<ItemBuilder: PoolItemBuilder + Debug> {
     inner: Arc<RwLock<HashMap<ItemBuilder::Token, ItemBuilder::Item>>>,
 
@@ -72,13 +73,13 @@ where
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum RetryPolicy {
     FixedRetry,
     Forever,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RetryConfig {
     retry_times: u32,
     initial_retry_interval: Duration,

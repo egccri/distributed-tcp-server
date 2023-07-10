@@ -14,6 +14,7 @@ members = [
 
 [dependencies]
 egccri-future-util = { path = "crates/egccri-future-util" }
+pool = { path = "crates/common/pool" }
 clap = { version = "4.0.15", features = ["color", "suggestions", "derive"] }
 thiserror = "1.0.37"
 anyhow = "1.0.65"
