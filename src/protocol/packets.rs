@@ -10,7 +10,35 @@ pub trait Fire: Into<String> {}
 
 pub trait Recv: TryFrom<String> {}
 
-// 如果你的协议区分req和resp，可以使用一个packet，如果你的协议不区分，则需要分开SendPacket和ReceivePacket
+// If your protocol can split req or resp itself, you can take there all in one packet enum.
+#[derive(Debug, Clone, PartialEq)]
+pub struct RawPacket {
+    header: PacketHeader,
+    packet: Packet,
+}
+
+impl RawPacket {
+    pub fn read(raw: String) -> Result<Self, PacketError> {
+        let header = PacketHeader::new(raw.as_str())?;
+        Ok(RawPacket {
+            header,
+            packet: Packet::read(raw)?,
+        })
+    }
+
+    pub fn write(self) -> Result<String, PacketError> {
+        Packet::write(self.packet)
+    }
+
+    pub fn header(&self) -> &PacketHeader {
+        &self.header
+    }
+
+    pub fn packet(&self) -> Packet {
+        self.packet.clone()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Packet {
     SignIn(SignInRecv),
@@ -50,8 +78,10 @@ impl Packet {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
 pub struct PacketHeader {
     packet_type: u8,
+    client_id: String,
 }
 
 impl PacketHeader {
@@ -60,6 +90,9 @@ impl PacketHeader {
         if raw_vec.len() > 1 {
             Ok(PacketHeader {
                 packet_type: raw_vec[0].parse::<u8>().unwrap_or(u8::MAX),
+                client_id: raw_vec[1]
+                    .parse::<String>()
+                    .unwrap_or("unknown".to_string()),
             })
         } else {
             Err(PacketError::ParsePacketHeaderError {
@@ -70,6 +103,10 @@ impl PacketHeader {
 
     pub fn packet_type(&self) -> u8 {
         self.packet_type
+    }
+
+    pub fn client_id(&self) -> String {
+        self.client_id.clone()
     }
 }
 

@@ -124,22 +124,21 @@ impl RaftServer {
 }
 
 // Hold a raft client there, read or write to the raft.
+#[derive(Debug, Clone)]
 pub struct RaftStorage {}
-
-impl RaftStorage {}
 
 // Impl router operations here.
 #[async_trait]
 impl RouterStorage for RaftStorage {
-    async fn get_channel_router(channel_id: ChannelId) -> Value {
+    async fn get_channel_router(&self, channel_id: ChannelId) -> Value {
         todo!()
     }
 
-    async fn update_or_insert_channel_node(value: Value) -> Value {
+    async fn update_or_insert_channel_node(&self, value: Value) -> Value {
         todo!()
     }
 
-    async fn router_lease(router: RouterId) -> Option<RouterId> {
+    async fn router_lease(&self, router: RouterId) -> Option<RouterId> {
         todo!()
     }
 }

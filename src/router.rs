@@ -10,8 +10,11 @@ mod router_service;
 pub mod server;
 mod storage;
 
+use crate::protocol::packets::RawPacket;
 use crate::protocol::PacketError;
-pub use storage::Storage as RouterStorage;
+use crate::router::remote::Remotes;
+use crate::server::session::SharedSession;
+pub use storage::RouterStorage;
 
 #[derive(thiserror::Error, Debug)]
 pub enum RouterError {
@@ -54,14 +57,35 @@ pub type Key = ChannelId;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Value {
-    channel_id: ChannelId,
-    router: Router,
-    channel_status: ChannelStatus,
+    pub channel_id: ChannelId,
+    pub router: Router,
+    pub channel_status: ChannelStatus,
 }
 
-impl Router {
+#[derive(Debug, Clone)]
+pub struct RouterClient<Storage> {
+    router_id: RouterId,
+    local: SharedSession,
+    remotes: Remotes,
+    storage: Storage,
+}
+
+impl<Storage> RouterClient<Storage>
+where
+    Storage: RouterStorage + Clone,
+{
     // Split local and remote message here.
     // Process local to the local broker session.
+    pub async fn send(&self, raw_packet: RawPacket) -> Result<(), RouterError> {
+        let channel_id = ChannelId::from(raw_packet.header().client_id());
+        let value: Value = self.storage.get_channel_router(channel_id.clone()).await;
+        if self.router_id == value.router.router {
+            self.local.send(&channel_id, raw_packet.packet()).await;
+        } else {
+            let _ = self.remotes.send(value, raw_packet.packet()).await;
+        }
+        Ok(())
+    }
 }
 
 impl Value {

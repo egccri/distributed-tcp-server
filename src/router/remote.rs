@@ -1,60 +1,69 @@
 use crate::protocol::packets::Packet;
 use crate::router::router_service::router_service_client::RouterServiceClient;
 use crate::router::router_service::RouterRequest;
-use crate::router::{RouterError, RouterId};
+use crate::router::{RouterError, RouterId, Value};
 use crate::server::channel::ChannelId;
-use std::collections::HashMap;
-use std::net::{IpAddr, Ipv4Addr};
-use std::sync::Arc;
-use tokio::sync::RwLock;
+use pool::MutexPool;
+use std::net::IpAddr;
 use tonic::transport::{Channel, Endpoint};
-
-// if need add lock here, or use channel
-pub type RouterClients = Arc<RwLock<HashMap<RouterId, (IpAddr, RouterGrpcClient)>>>;
+use tracing::info;
 
 #[derive(Debug, Clone)]
-pub struct Remotes {
-    inner: RouterClients,
+struct ChannelBuilder;
+
+#[async_trait::async_trait]
+impl pool::PoolItemBuilder for ChannelBuilder {
+    type Token = String;
+    type Item = Channel;
+    type Error = tonic::transport::Error;
+
+    async fn build(&self, addr: &Self::Token) -> Result<Self::Item, Self::Error> {
+        info!("Building channel for addr: {}", &addr);
+        Endpoint::new(addr.clone())?.connect().await
+    }
 }
 
 /// A remote call with flow steps:
 /// local: rpc call -> make packet -> fetch router value -> make inner rpc call with value's addr and packet
 /// remote: receive inner call -> send packet to the local session -> return reply packet
 #[derive(Debug, Clone)]
-pub struct RouterGrpcClient {
-    grpc_client: Option<Channel>,
-    endpoint: Endpoint,
+pub struct Remotes {
+    inner: MutexPool<ChannelBuilder>,
 }
 
-impl RouterGrpcClient {
-    pub async fn new(addr: IpAddr) -> Result<RouterGrpcClient, RouterError> {
-        let endpoint = Channel::from_shared(format!("http://{}", addr))?;
-        Ok(Self {
-            grpc_client: endpoint.connect().await.ok(),
-            endpoint,
-        })
+impl Remotes {
+    pub async fn new() -> Remotes {
+        let channel_builder = ChannelBuilder;
+        let channel_pool = MutexPool::new(channel_builder, None);
+        Remotes {
+            inner: channel_pool,
+        }
     }
 
-    pub fn endpoint(&mut self, endpoint: Endpoint) {
-        self.endpoint = endpoint
-    }
+    pub async fn send(&self, value: Value, packet: Packet) -> Result<Packet, RouterError> {
+        let channel_id = value.channel_id;
+        let router_id: RouterId = value.router.router;
+        let router_addr: String = value.router.remote_addr;
 
-    pub async fn connect(&self) -> Option<Channel> {
-        self.endpoint.connect().await.ok()
+        let channel = self
+            .inner
+            .get(&router_addr)
+            .await
+            .map_err(|err| RouterError::ChannelConnectError)?;
+        // find RouterGrpcClient
+        let reply = self.send_packet(channel, channel_id, packet).await?;
+        Ok(reply)
     }
 
     async fn send_packet(
         &self,
+        channel: Channel,
         channel_id: ChannelId,
         packet: Packet,
     ) -> Result<Packet, RouterError> {
         let raw = packet.write()?;
 
         let reply = {
-            let channel = self
-                .grpc_client
-                .clone()
-                .ok_or_else(|| RouterError::ChannelConnectError)?;
             let mut client = RouterServiceClient::new(channel);
             let message = RouterRequest {
                 channel_id: channel_id.into(),
@@ -69,74 +78,13 @@ impl RouterGrpcClient {
 
         Ok(Packet::read(reply.into_inner().packet)?)
     }
-}
 
-impl Remotes {
-    pub async fn new() -> Remotes {
-        Remotes {
-            inner: Arc::new(RwLock::new(HashMap::new())),
-        }
-    }
-
-    // init with config routers
+    // init with config routers, maybe not use
+    #[warn(dead_code)]
     pub async fn init(&mut self, routers: Vec<(RouterId, IpAddr)>) -> Result<(), RouterError> {
         for (router_id, ip_addr) in routers.iter() {
-            let client = {
-                self.create_client(router_id.clone(), ip_addr.clone())
-                    .await?
-            };
-            self.inner
-                .write()
-                .await
-                .insert(router_id.clone(), (ip_addr.clone(), client));
+            let _ = self.inner.get(&ip_addr.to_string()).await;
         }
         Ok(())
-    }
-
-    pub async fn create_client(
-        &mut self,
-        router_id: RouterId,
-        router_addr: IpAddr,
-    ) -> Result<RouterGrpcClient, RouterError> {
-        let client = RouterGrpcClient::new(router_addr).await?;
-        let client_clone = client.clone();
-        let _ = self
-            .inner
-            .write()
-            .await
-            .insert(router_id, (router_addr, client_clone));
-        Ok(client)
-    }
-
-    pub async fn send_packet(&mut self, packet: Packet) -> Result<Packet, RouterError> {
-        // TODO find packet owns node in the storage
-        let channel_id = ChannelId::generate();
-        let router_id: RouterId = 1;
-        let router_addr: IpAddr = IpAddr::V4(Ipv4Addr::LOCALHOST);
-        // find RouterGrpcClient
-        let reply = self
-            .find_router_and_send(channel_id, router_id, router_addr, packet)
-            .await?;
-        Ok(reply)
-    }
-
-    pub async fn find_router_and_send(
-        &mut self,
-        channel_id: ChannelId,
-        router_id: RouterId,
-        router_addr: IpAddr,
-        packet: Packet,
-    ) -> Result<Packet, RouterError> {
-        if let Some((a, b)) = self.inner.read().await.get(&router_id) {
-            if *a == router_addr {
-                return Ok(b.send_packet(channel_id.clone(), packet).await?);
-            }
-        };
-        let reply = self
-            .create_client(router_id, router_addr)
-            .await?
-            .send_packet(channel_id.clone(), packet.clone())
-            .await?;
-        Ok(reply)
     }
 }

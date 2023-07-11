@@ -1,6 +1,5 @@
 use ::config::{Config, File};
 use clap::Parser;
-use openraft::testing::StoreBuilder;
 use time::UtcOffset;
 use tracing::{info, Level};
 use tracing_subscriber::fmt::time::OffsetTime;

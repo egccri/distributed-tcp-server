@@ -3,12 +3,12 @@ use async_trait::async_trait;
 
 /// Define all state that need
 #[async_trait]
-pub trait Storage {
+pub trait RouterStorage: Clone {
     // fetch channel in which router.
-    async fn get_channel_router(key: Key) -> Value;
+    async fn get_channel_router(&self, key: Key) -> Value;
 
-    async fn update_or_insert_channel_node(value: Value) -> Value;
+    async fn update_or_insert_channel_node(&self, value: Value) -> Value;
 
     // registry router
-    async fn router_lease(router: RouterId) -> Option<RouterId>;
+    async fn router_lease(&self, router: RouterId) -> Option<RouterId>;
 }
