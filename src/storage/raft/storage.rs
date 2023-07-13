@@ -1,5 +1,4 @@
-use crate::router::{RouterId, Value};
-use crate::server::channel::ChannelId;
+use crate::router::Value;
 use crate::storage::raft::{Node, NodeId, TypeConfig};
 use openraft::async_trait::async_trait;
 use openraft::{
@@ -20,10 +19,7 @@ use tracing::debug;
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Request {
     // if it necessary add node_id, node id map for channel where
-    Connect { value: Value },                  // replay old value
-    DisConnect { value: Value },               // change channel status
-    GetClientNodeId { channel_id: ChannelId }, // get value
-    BrokerShutdown { router_id: RouterId },    // remove all channel
+    Connect { value: Value }, // replay old value
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -46,7 +42,7 @@ pub struct Store {
     log: RwLock<BTreeMap<u64, String>>,
 
     // The applied log index and data.
-    state_machine: RwLock<StateMachine>,
+    pub state_machine: RwLock<StateMachine>,
 
     // The latest vote store here, in the standard paper, save term only, there's a option feature.
     voted: RwLock<Option<Vote<NodeId>>>,

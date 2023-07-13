@@ -1,6 +1,5 @@
 // A grpc server that used for transfer income operation that need send packet to the remote.
 use crate::protocol::packets::Packet;
-use crate::router::remote::Remotes;
 use crate::router::router_service::router_service_server::{RouterService, RouterServiceServer};
 use crate::router::router_service::{RouterReply, RouterRequest};
 use crate::router::{RouterError, RouterId};
@@ -12,16 +11,11 @@ use tonic::{Request, Response, Status};
 pub struct RouterServer {
     id: RouterId,
     addr: String,
-    remotes: Option<Remotes>,
 }
 
 impl RouterServer {
     pub fn new(id: RouterId, addr: String) -> RouterServer {
-        RouterServer {
-            id,
-            addr,
-            remotes: None,
-        }
+        RouterServer { id, addr }
     }
 
     pub async fn start_router_server(
