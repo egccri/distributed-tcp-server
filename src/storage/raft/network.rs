@@ -15,10 +15,10 @@ use tonic::transport::{Channel, Error};
 use tracing::info;
 
 #[derive(Debug, Clone)]
-struct ChannelBuilder;
+struct NetworkChannelBuilder;
 
 #[async_trait::async_trait]
-impl pool::PoolItemBuilder for ChannelBuilder {
+impl pool::PoolItemBuilder for NetworkChannelBuilder {
     type Token = String;
     type Item = Channel;
     type Error = Error;
@@ -33,7 +33,7 @@ impl pool::PoolItemBuilder for ChannelBuilder {
 
 #[derive(Debug, Clone)]
 pub struct NetworkManager {
-    channel_pool: MutexPool<ChannelBuilder>,
+    channel_pool: MutexPool<NetworkChannelBuilder>,
 }
 
 #[derive(Debug)]
@@ -62,7 +62,7 @@ impl RaftNetworkFactory<TypeConfig> for NetworkManager {
 
 impl NetworkManager {
     pub fn new() -> NetworkManager {
-        let channel_builder = ChannelBuilder;
+        let channel_builder = NetworkChannelBuilder;
         let channel_pool = MutexPool::new(channel_builder, None);
         NetworkManager { channel_pool }
     }

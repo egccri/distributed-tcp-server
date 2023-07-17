@@ -17,4 +17,7 @@ pub enum RaftStorageError {
 
     #[error("Raft core is None")]
     RaftServerRaftCoreIsNone,
+
+    #[error("Key value is None")]
+    ClientKeyNotFoundError,
 }

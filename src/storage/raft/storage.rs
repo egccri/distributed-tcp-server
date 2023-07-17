@@ -62,14 +62,14 @@ pub struct StateMachine {
 
     pub last_membership: StoredMembership<NodeId, Node>,
 
-    pub data: BTreeMap<String, String>,
+    pub data_tree: BTreeMap<String, String>,
 }
 
 pub struct StoreSnapshot {
     pub meta: SnapshotMeta<NodeId, Node>,
 
     /// The data of the state machine at the time of this snapshot.
-    pub data: Vec<u8>,
+    pub snapshot_data: Vec<u8>,
 }
 
 impl Store {
@@ -90,7 +90,7 @@ impl StateMachine {
         StateMachine {
             last_applied_log: None,
             last_membership: Default::default(),
-            data: Default::default(),
+            data_tree: Default::default(),
         }
     }
 
@@ -187,7 +187,7 @@ impl RaftSnapshotBuilder<TypeConfig> for Arc<Store> {
 
         let snapshot = StoreSnapshot {
             meta: meta.clone(),
-            data: data.clone(),
+            snapshot_data: data.clone(),
         };
 
         {
@@ -307,7 +307,7 @@ impl RaftStorage<TypeConfig> for Arc<Store> {
                             StorageIOError::write_log_entry(*entry.get_log_id(), &e)
                         })?;
 
-                        sm.data.insert(value.channel_id().into(), json.clone());
+                        sm.data_tree.insert(value.channel_id().into(), json.clone());
                         res.push(Response::new(Some(json)));
                     }
                     _ => {}
@@ -343,11 +343,11 @@ impl RaftStorage<TypeConfig> for Arc<Store> {
 
         let new_snapshot = StoreSnapshot {
             meta: meta.clone(),
-            data: snapshot.into_inner(),
+            snapshot_data: snapshot.into_inner(),
         };
 
         {
-            let t = &new_snapshot.data;
+            let t = &new_snapshot.snapshot_data;
             let y = std::str::from_utf8(t).unwrap();
             debug!("SNAP META:{:?}", meta);
             debug!("JSON SNAP DATA:{}", y);
@@ -355,9 +355,10 @@ impl RaftStorage<TypeConfig> for Arc<Store> {
 
         // Update the state machine.
         {
-            let new_sm: StateMachine = serde_json::from_slice(&new_snapshot.data).map_err(|e| {
-                StorageIOError::read_snapshot(Some(new_snapshot.meta.signature()), &e)
-            })?;
+            let new_sm: StateMachine = serde_json::from_slice(&new_snapshot.snapshot_data)
+                .map_err(|e| {
+                    StorageIOError::read_snapshot(Some(new_snapshot.meta.signature()), &e)
+                })?;
             let mut sm = self.state_machine.write().await;
             *sm = new_sm;
         }
@@ -373,7 +374,7 @@ impl RaftStorage<TypeConfig> for Arc<Store> {
     ) -> Result<Option<Snapshot<TypeConfig>>, StorageError<NodeId>> {
         match &*self.current_snapshot.read().await {
             Some(snapshot) => {
-                let data = snapshot.data.clone();
+                let data = snapshot.snapshot_data.clone();
                 Ok(Some(Snapshot {
                     meta: snapshot.meta.clone(),
                     snapshot: Box::new(Cursor::new(data)),

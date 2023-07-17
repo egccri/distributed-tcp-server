@@ -12,4 +12,5 @@ message RaftClientRequest {
 
 message RaftClientReply {
   string inner = 1;
+  string error = 2;
 }

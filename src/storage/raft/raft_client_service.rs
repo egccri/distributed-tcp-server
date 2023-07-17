@@ -10,6 +10,8 @@ pub struct RaftClientRequest {
 pub struct RaftClientReply {
     #[prost(string, tag = "1")]
     pub inner: ::prost::alloc::string::String,
+    #[prost(string, tag = "2")]
+    pub error: ::prost::alloc::string::String,
 }
 /// Generated client implementations.
 pub mod raft_client_service_client {
