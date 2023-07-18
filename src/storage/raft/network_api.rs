@@ -1,11 +1,14 @@
+use crate::storage::raft::client::RaftClient;
 use crate::storage::raft::raft_client_service::raft_client_service_server::{
     RaftClientService, RaftClientServiceServer,
 };
 use crate::storage::raft::raft_client_service::{RaftClientReply, RaftClientRequest};
 use crate::storage::raft::raft_service::raft_service_server::{RaftService, RaftServiceServer};
 use crate::storage::raft::raft_service::{RaftReply, RaftRequest};
-use crate::storage::raft::RaftCore;
+use crate::storage::raft::{NodeId, RaftCore, TypeConfig};
 use crate::storage::RaftStorageError;
+use openraft::error::RaftError;
+use openraft::raft::ClientWriteResponse;
 use tonic::transport::Server;
 use tonic::{Request, Response, Status};
 use tracing::info;
@@ -14,10 +17,11 @@ use tracing::info;
 pub async fn start_raft_api_server(
     addr: &str,
     raft_core: RaftCore,
+    raft_client: RaftClient,
 ) -> Result<(), RaftStorageError> {
     let socket_addr = addr.parse()?;
     let raft_service = RaftSvc::new(raft_core.clone());
-    let raft_client_service = RaftClientSvc::new(raft_core);
+    let raft_client_service = RaftClientSvc::new(raft_client);
     Server::builder()
         .add_service(RaftServiceServer::new(raft_service))
         .add_service(RaftClientServiceServer::new(raft_client_service))
@@ -89,12 +93,12 @@ impl RaftService for RaftSvc {
 }
 
 struct RaftClientSvc {
-    raft_core: RaftCore,
+    raft_client: RaftClient,
 }
 
 impl RaftClientSvc {
-    pub fn new(raft_core: RaftCore) -> Self {
-        RaftClientSvc { raft_core }
+    pub fn new(raft_client: RaftClient) -> Self {
+        RaftClientSvc { raft_client }
     }
 }
 
@@ -104,6 +108,27 @@ impl RaftClientService for RaftClientSvc {
         &self,
         request: Request<RaftClientRequest>,
     ) -> Result<Response<RaftClientReply>, Status> {
-        todo!()
+        let request = request.into_inner().inner;
+        info!("Received forward request with payload {}", &request);
+        let request = serde_json::from_str(request.as_str()).unwrap();
+        let result = self.raft_client._write(request).await;
+        match result {
+            Ok(response) => {
+                let json = serde_json::to_string(&response).unwrap();
+                let reply = RaftClientReply {
+                    inner: json,
+                    error: "".to_string(),
+                };
+                Ok(Response::new(reply))
+            }
+            Err(err) => {
+                let json = serde_json::to_string(&err).unwrap();
+                let reply = RaftClientReply {
+                    inner: "".to_string(),
+                    error: json,
+                };
+                Ok(Response::new(reply))
+            }
+        }
     }
 }

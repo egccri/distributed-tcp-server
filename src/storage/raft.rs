@@ -7,6 +7,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 
 use crate::server::channel::ChannelId;
+use crate::storage::raft::client::RaftClient;
 use crate::storage::raft::network::NetworkManager;
 use crate::storage::raft::network_api::start_raft_api_server;
 use crate::storage::raft::storage::Store;
@@ -102,7 +103,10 @@ impl RaftServer {
 
         self.init().await?;
 
-        start_raft_api_server(self.server_addr.as_str(), raft).await?;
+        let raft_client =
+            RaftClient::new(raft.clone(), store.clone(), 1, Node::new("0.0.0.0:9091"));
+
+        start_raft_api_server(self.server_addr.as_str(), raft, raft_client).await?;
 
         Ok(())
     }
@@ -125,7 +129,9 @@ impl RaftServer {
 
 // Hold a raft client there, read or write to the raft.
 #[derive(Debug, Clone)]
-pub struct RaftStorage {}
+pub struct RaftStorage {
+    raft_client: RaftClient,
+}
 
 // Impl router operations here.
 #[async_trait]
