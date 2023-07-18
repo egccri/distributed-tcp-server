@@ -118,7 +118,7 @@ impl RaftClient {
         let mut client = RaftClientServiceClient::new(forward_channel);
         let request = serde_json::to_string(&request).unwrap();
         let request = tonic::Request::new(RaftClientRequest { inner: request });
-        let result = client.send_message(request).await.unwrap().into_inner();
+        let result = client.forward(request).await.unwrap().into_inner();
 
         if !result.inner.is_empty() {
             let reply: ClientWriteResponse<TypeConfig> =

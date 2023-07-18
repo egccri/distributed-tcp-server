@@ -97,7 +97,7 @@ pub mod raft_client_service_client {
             self.inner = self.inner.max_encoding_message_size(limit);
             self
         }
-        pub async fn send_message(
+        pub async fn forward(
             &mut self,
             request: impl tonic::IntoRequest<super::RaftClientRequest>,
         ) -> std::result::Result<tonic::Response<super::RaftClientReply>, tonic::Status> {
@@ -109,12 +109,12 @@ pub mod raft_client_service_client {
             })?;
             let codec = tonic::codec::ProstCodec::default();
             let path = http::uri::PathAndQuery::from_static(
-                "/raft_client_service.RaftClientService/SendMessage",
+                "/raft_client_service.RaftClientService/Forward",
             );
             let mut req = request.into_request();
             req.extensions_mut().insert(GrpcMethod::new(
                 "raft_client_service.RaftClientService",
-                "SendMessage",
+                "Forward",
             ));
             self.inner.unary(req, path, codec).await
         }
@@ -127,7 +127,7 @@ pub mod raft_client_service_server {
     /// Generated trait containing gRPC methods that should be implemented for use with RaftClientServiceServer.
     #[async_trait]
     pub trait RaftClientService: Send + Sync + 'static {
-        async fn send_message(
+        async fn forward(
             &self,
             request: tonic::Request<super::RaftClientRequest>,
         ) -> std::result::Result<tonic::Response<super::RaftClientReply>, tonic::Status>;
@@ -208,12 +208,10 @@ pub mod raft_client_service_server {
         fn call(&mut self, req: http::Request<B>) -> Self::Future {
             let inner = self.inner.clone();
             match req.uri().path() {
-                "/raft_client_service.RaftClientService/SendMessage" => {
+                "/raft_client_service.RaftClientService/Forward" => {
                     #[allow(non_camel_case_types)]
-                    struct SendMessageSvc<T: RaftClientService>(pub Arc<T>);
-                    impl<T: RaftClientService> tonic::server::UnaryService<super::RaftClientRequest>
-                        for SendMessageSvc<T>
-                    {
+                    struct ForwardSvc<T: RaftClientService>(pub Arc<T>);
+                    impl<T: RaftClientService> tonic::server::UnaryService<super::RaftClientRequest> for ForwardSvc<T> {
                         type Response = super::RaftClientReply;
                         type Future = BoxFuture<tonic::Response<Self::Response>, tonic::Status>;
                         fn call(
@@ -221,7 +219,7 @@ pub mod raft_client_service_server {
                             request: tonic::Request<super::RaftClientRequest>,
                         ) -> Self::Future {
                             let inner = Arc::clone(&self.0);
-                            let fut = async move { (*inner).send_message(request).await };
+                            let fut = async move { (*inner).forward(request).await };
                             Box::pin(fut)
                         }
                     }
@@ -232,7 +230,7 @@ pub mod raft_client_service_server {
                     let inner = self.inner.clone();
                     let fut = async move {
                         let inner = inner.0;
-                        let method = SendMessageSvc(inner);
+                        let method = ForwardSvc(inner);
                         let codec = tonic::codec::ProstCodec::default();
                         let mut grpc = tonic::server::Grpc::new(codec)
                             .apply_compression_config(

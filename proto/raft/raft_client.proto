@@ -2,7 +2,7 @@ syntax = "proto3";
 package raft_client_service;
 
 service RaftClientService {
-  rpc SendMessage(RaftClientRequest) returns (RaftClientReply);
+  rpc Forward(RaftClientRequest) returns (RaftClientReply);
 }
 
 // request is serde with json string

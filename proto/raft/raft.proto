@@ -2,12 +2,7 @@ syntax = "proto3";
 package raft_service;
 
 service RaftService {
-
-  /// Forward a request to other
-  rpc Forward(RaftRequest) returns (RaftReply) {}
-
   // raft RPC
-
   rpc AppendEntries(RaftRequest) returns (RaftReply);
   rpc InstallSnapshot(RaftRequest) returns (RaftReply);
   rpc Vote(RaftRequest) returns (RaftReply);

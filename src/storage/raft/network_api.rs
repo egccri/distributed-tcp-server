@@ -38,10 +38,6 @@ impl RaftSvc {
 
 #[tonic::async_trait]
 impl RaftService for RaftSvc {
-    async fn forward(&self, request: Request<RaftRequest>) -> Result<Response<RaftReply>, Status> {
-        todo!()
-    }
-
     // append_entries:call_core: openraft::raft: failure sending tx to RaftCore; message: AppendEntries: vote=4-1:committed, prev_log_id=None, leader_commit=None, entries=[0-0-0:membership: voters:[{1:{BasicNode { addr: "0.0.0.0:9091" }},2:{BasicNode { addr: "0.0.0.0:9092" }},3:{BasicNode { addr: "0.0.0.0:9093" }}}], learners:[],4-1-1:blank] core_result=Err(Panicked)
     async fn append_entries(
         &self,
@@ -104,7 +100,7 @@ impl RaftClientSvc {
 
 #[tonic::async_trait]
 impl RaftClientService for RaftClientSvc {
-    async fn send_message(
+    async fn forward(
         &self,
         request: Request<RaftClientRequest>,
     ) -> Result<Response<RaftClientReply>, Status> {
