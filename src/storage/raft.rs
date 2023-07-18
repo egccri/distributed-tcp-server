@@ -15,7 +15,7 @@ use crate::storage::RaftStorageError;
 use storage::Request;
 use storage::Response;
 
-mod client;
+pub mod client;
 mod network;
 mod network_api;
 mod raft_client_service;
@@ -74,7 +74,7 @@ impl RaftServer {
     }
 
     // init nodes config in config file
-    pub async fn start(&mut self) -> Result<(), RaftStorageError> {
+    pub async fn start(&mut self) -> Result<RaftClient, RaftStorageError> {
         let config = Config {
             heartbeat_interval: 500,
             election_timeout_min: 1500,
@@ -105,10 +105,16 @@ impl RaftServer {
 
         let raft_client =
             RaftClient::new(raft.clone(), store.clone(), 1, Node::new("0.0.0.0:9091"));
+        let raft_client_clone = raft_client.clone();
+        let raft_server_addr = self.server_addr.clone();
+        tokio::spawn(async move {
+            // FIXME error handle
+            start_raft_api_server(raft_server_addr.as_str(), raft, raft_client_clone)
+                .await
+                .unwrap();
+        });
 
-        start_raft_api_server(self.server_addr.as_str(), raft, raft_client).await?;
-
-        Ok(())
+        Ok(raft_client)
     }
 
     pub async fn init(&self) -> Result<(), RaftStorageError> {
@@ -128,9 +134,15 @@ impl RaftServer {
 }
 
 // Hold a raft client there, read or write to the raft.
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct RaftStorage {
     raft_client: RaftClient,
+}
+
+impl RaftStorage {
+    pub fn new(raft_client: RaftClient) -> RaftStorage {
+        RaftStorage { raft_client }
+    }
 }
 
 // Impl router operations here.

@@ -27,7 +27,12 @@ impl Cli {
         let (server_sender, server_receiver) = mpsc::channel(1000);
 
         let server_config_clone = server_config.clone();
-        crate::server::start(server_config_clone, server_sender, ctrl_c_rx).await?;
+        let router_client =
+            crate::server::start(server_config_clone, server_sender, ctrl_c_rx).await?;
+
+        // FIXME return a channel or else other method to send rpc call or pub/sub call
+        // FIXME use router_client by yourself
+
         Ok(())
     }
 

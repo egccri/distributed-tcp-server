@@ -2,11 +2,14 @@ use crate::config::ServerConfig;
 use crate::protocol::packets::Packet;
 use crate::protocol::PacketError;
 use crate::router::server::RouterServer;
+use crate::router::{RouterClient, RouterStorage};
 use crate::server::broker::BrokerServer;
 use crate::server::session::SharedSession;
-use crate::storage::raft::RaftServer;
+use crate::storage::raft::client::RaftClient;
+use crate::storage::raft::{RaftServer, RaftStorage};
 use std::io;
 use std::time::Duration;
+use tokio::join;
 use tokio::sync::broadcast::Receiver;
 use tokio::sync::mpsc::Sender;
 use tokio_util::codec::LinesCodecError;
@@ -27,9 +30,10 @@ pub async fn start(
     server_config: ServerConfig,
     server_sender: Sender<Packet>,
     ctrl_c_rx: Receiver<()>,
-) -> Result<(), ServerSideError> {
+) -> Result<RouterClient<impl RouterStorage>, ServerSideError> {
     let session = SharedSession::init().await;
 
+    // Raft node start
     #[cfg(feature = "raft-store")]
     if server_config.raft.is_none() {
         panic!("Miss raft config when raft-store feature is turn on.")
@@ -37,32 +41,39 @@ pub async fn start(
     let raft_config = server_config.raft.unwrap();
     let raft_node_id = raft_config.node_id;
     let raft_network_addr = raft_config.raft_network_addr.clone();
-    let mut raft_storage = RaftServer::new(raft_node_id, raft_network_addr.clone());
-    let mut raft_storage_clone = raft_storage.clone();
+    let mut raft_server = RaftServer::new(raft_node_id, raft_network_addr.clone());
+    let mut raft_server_clone = raft_server.clone();
     info!(
         "Raft Storage Server {} starting with cli config addr: {}",
         raft_node_id, raft_network_addr
     );
-    tokio::spawn(async move {
-        // FIXME error handle
-        let _ = raft_storage_clone.start().await;
-    });
+    // FIXME error handle, add task handle
+    let raft_client = raft_server_clone.start().await.unwrap();
+
+    // Build a raft storage
+    let raft_storage = RaftStorage::new(raft_client);
 
     tokio::time::sleep(Duration::from_secs(2)).await;
 
+    // Router server side start for remote packet received.
     let router_id = server_config.router.router_id;
     let router_server_addr = server_config.router.router_server_addr.clone();
-    let router = RouterServer::new(router_id, router_server_addr.clone());
+    let router_server = RouterServer::new(router_id, router_server_addr.clone());
     info!(
         "Router {} starting with cli config addr: {}",
         router_id, router_server_addr
     );
     let session_router = session.clone();
-    tokio::spawn(async move {
+    let router_task = tokio::spawn(async move {
         // FIXME error handle
-        let _ = router.start_router_server(session_router).await;
+        let _ = router_server.start_router_server(session_router).await;
     });
 
+    // Build a router client for top use
+    let session_router_client = session.clone();
+    let router_client = RouterClient::new(router_id, session_router_client, raft_storage).await;
+
+    // Iot broker start
     info!(
         "Server starting with cli config addr: {:?}",
         server_config.bind_address
@@ -74,8 +85,12 @@ pub async fn start(
         session,
     )
     .await?;
-    iot_server.start().await;
-    Ok(())
+    let iot_server_task = tokio::spawn(async move {
+        iot_server.start().await;
+    });
+
+    join!(iot_server_task, router_task);
+    Ok(router_client)
 }
 
 #[derive(thiserror::Error, Debug)]

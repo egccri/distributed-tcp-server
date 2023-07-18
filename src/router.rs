@@ -74,6 +74,19 @@ impl<Storage> RouterClient<Storage>
 where
     Storage: RouterStorage + Clone,
 {
+    pub async fn new(
+        router_id: RouterId,
+        session: SharedSession,
+        storage: Storage,
+    ) -> RouterClient<Storage> {
+        RouterClient {
+            router_id,
+            local: session,
+            remotes: Remotes::new().await,
+            storage,
+        }
+    }
+
     // Split local and remote message here.
     // Process local to the local broker session.
     pub async fn send(&self, raw_packet: RawPacket) -> Result<(), RouterError> {
